@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import * as Joi from 'joi';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
         DB_USERNAME: Joi.string().required(),
         DB_PASSWORD: Joi.string().required(),
         DB_NAME: Joi.string().required(),
+        SECRET_KEY: Joi.string().required(),
       }),
     }),
     TypeOrmModule.forRoot({
@@ -38,6 +40,7 @@ import { UsersModule } from './users/users.module';
       entities: [UserEntity],
     }),
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

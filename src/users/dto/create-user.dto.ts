@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { GENDER } from 'config/constants';
+import { GENDER, POSITION } from 'config/constants';
 
 export class CreateUserDto {
   @IsString()
@@ -17,4 +17,12 @@ export class CreateUserDto {
   @IsEnum(GENDER)
   @IsNotEmpty()
   gender: GENDER;
+
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @IsEnum(POSITION)
+  @IsNotEmpty()
+  position: POSITION;
 }

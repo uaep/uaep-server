@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { IsEmail, IsEnum } from 'class-validator';
-import { GENDER } from 'config/constants';
+import { GENDER, POSITION } from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
 
 @Entity({ name: 'user' })
@@ -30,11 +30,21 @@ export class UserEntity {
   @IsEnum(GENDER)
   gender: GENDER;
 
+  @Column()
+  address: string;
+
+  @Column({ type: 'enum', enum: POSITION })
+  @IsEnum(POSITION)
+  position: POSITION;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ nullable: true })
+  token: string;
 
   @BeforeInsert()
   async hashPassword(): Promise<void> {

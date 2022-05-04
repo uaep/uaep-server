@@ -8,7 +8,6 @@ import { DOMAIN } from 'config/constants';
 import { EmailService } from 'src/email/email.service';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
-import { LoginDto } from './dto/login.dto';
 import { UserEntity } from './entities/user.entity';
 
 @Injectable()
@@ -54,15 +53,10 @@ export class UserService {
     }
   }
 
-  async login({ email, password }: LoginDto) {
+  async getProfile(email: string) {
     const user = await this.userRepository.findOne({ email });
-    if (!user) {
-      throw new BadRequestException('User not Found: Incorrect email.');
-    }
-    const checkPassword = await user.checkPassword(password);
-    if (!checkPassword) {
-      throw new BadRequestException('Incorrect password.');
-    }
-    // TODO : JWT
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { uid, password, createdAt, updatedAt, ...profile } = user;
+    return profile;
   }
 }
