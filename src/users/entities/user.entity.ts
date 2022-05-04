@@ -7,11 +7,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-
-enum GENDER {
-  MALE = 'male',
-  FEMALE = 'female',
-}
+import { IsEmail, IsEnum } from 'class-validator';
+import { GENDER } from 'config/constants';
+import { InternalServerErrorException } from '@nestjs/common';
 
 @Entity({ name: 'user' })
 export class UserEntity {
@@ -19,6 +17,7 @@ export class UserEntity {
   uid: number;
 
   @Column({ unique: true })
+  @IsEmail()
   email: string;
 
   @Column()
@@ -28,6 +27,7 @@ export class UserEntity {
   password: string;
 
   @Column({ type: 'enum', enum: GENDER })
+  @IsEnum(GENDER)
   gender: GENDER;
 
   @CreateDateColumn()
@@ -38,6 +38,19 @@ export class UserEntity {
 
   @BeforeInsert()
   async hashPassword(): Promise<void> {
-    this.password = await bcrypt.hash(this.password, 10);
+    try {
+      this.password = await bcrypt.hash(this.password, 10);
+    } catch (e) {
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async checkPassword(checkPW: string): Promise<boolean> {
+    try {
+      const checkPassword = await bcrypt.compare(checkPW, this.password);
+      return checkPassword;
+    } catch (e) {
+      throw new InternalServerErrorException();
+    }
   }
 }

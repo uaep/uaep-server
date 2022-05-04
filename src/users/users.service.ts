@@ -10,7 +10,6 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserEntity } from './entities/user.entity';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -57,9 +56,13 @@ export class UserService {
 
   async login({ email, password }: LoginDto) {
     const user = await this.userRepository.findOne({ email });
-    const checkPassword = await bcrypt.compare(password, user.password);
-    if (!checkPassword) {
-      throw new BadRequestException('Incorrect email or password.');
+    if (!user) {
+      throw new BadRequestException('User not Found: Incorrect email.');
     }
+    const checkPassword = await user.checkPassword(password);
+    if (!checkPassword) {
+      throw new BadRequestException('Incorrect password.');
+    }
+    // TODO : JWT
   }
 }
