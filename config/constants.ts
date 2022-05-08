@@ -11,8 +11,3 @@ export enum POSITION {
   DEFENDER = 'DF',
   GOALKEEPER = 'GK',
 }
-
-export const jwtConstants = {
-  secret: 'UAEP',
-  // secret: process.env.SECRET_KEY,
-};
