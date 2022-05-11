@@ -1,8 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +16,7 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   async validateUser(email: string, pw: string) {
@@ -21,13 +28,62 @@ export class AuthService {
     if (!checkPassword) {
       throw new BadRequestException('Incorrect password.');
     }
-    return user.email;
+    return user;
   }
 
-  async login(email: any) {
+  getAccessToken(email: string) {
     const payload = { email };
+    const access_token = this.jwtService.sign(payload, {
+      secret: this.config.get('ACCESS_TOKEN_SECRET_KEY'),
+      expiresIn: `${this.config.get('ACCESS_TOKEN_EXPIRATION_TIME')}s`,
+    });
+    return access_token;
+  }
+
+  getRefreshToken(email: string) {
+    const payload = { email };
+    const Refresh_token = this.jwtService.sign(payload, {
+      secret: this.config.get('REFRESH_TOKEN_SECRET_KEY'),
+      expiresIn: `${this.config.get('REFRESH_TOKEN_EXPIRATION_TIME')}s`,
+    });
+    return Refresh_token;
+  }
+
+  async getUserRefreshTokenMatches(email: string, refresh_token: string) {
+    const user = await this.userRepository.findOne({ email });
+    const isRefreshTokenMatch = await bcrypt.compare(
+      refresh_token,
+      user.currentHashedRefreshToken,
+    );
+    if (isRefreshTokenMatch) {
+      return true;
+    } else {
+      throw new UnauthorizedException('invalid signature');
+    }
+  }
+
+  async login(email: string) {
+    const refresh_token = this.getRefreshToken(email);
+    const currentHashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+    await this.userRepository.update(
+      { email },
+      {
+        currentHashedRefreshToken,
+      },
+    );
+    // TODO : return 하지 않고 header or cookie로 넘길 것
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.getAccessToken(email),
+      refresh_token: refresh_token,
     };
+  }
+
+  async logout(email: string) {
+    await this.userRepository.update(
+      { email },
+      {
+        currentHashedRefreshToken: null,
+      },
+    );
   }
 }

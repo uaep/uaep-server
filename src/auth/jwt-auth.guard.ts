@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from '@nestjs/passport';
 
-const TOKEN_ERROR = {
+export const TOKEN_ERROR = {
   INVALID_TOKEN: 'invalid signature',
   EXPIRED_TOKEN: 'jwt expired',
 };
@@ -25,24 +25,24 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
 
-    const { authorization } = req.headers;
+    const { access_token } = req.cookies;
 
-    if (authorization === undefined) {
+    if (access_token === undefined) {
       throw new UnauthorizedException('Token not sent');
     }
 
-    const token = authorization.replace('Bearer ', '');
+    //const token = authorization.replace('Bearer ', '');
     try {
-      req.user = this.jwtService.verify(token, {
+      req.user = this.jwtService.verify(access_token, {
         secret: this.config.get('ACCESS_TOKEN_SECRET_KEY'),
       });
     } catch (e) {
       switch (e.message) {
         case TOKEN_ERROR.INVALID_TOKEN:
-          throw new UnauthorizedException('Invalid token');
+          throw new UnauthorizedException('Invalid access token');
 
         case TOKEN_ERROR.EXPIRED_TOKEN:
-          throw new UnauthorizedException('Expired token');
+          throw new UnauthorizedException('Expired access token');
 
         default:
           throw new InternalServerErrorException();

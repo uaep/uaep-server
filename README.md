@@ -49,6 +49,8 @@ watch mode로 실행하기 전에,
 
 <span style="color:red">**반드시**</span> < .env.development.local >라는 이름의 파일을 만들고 아래 변수들을 저장할 것 (env 파일 이름 변경 절대 <span style="color:red">**X**</span> !!!)
 
+- BASE_URL : 사용할 URL(ex.http://localhost:3000)
+- PORT : 사용 할 포트 번호
 - DB_HOST : 사용할 DB의 host, dev에서는 localhost
 - DB_PORT : 사용할 DB의 port number
 - DB_USERNAME : 사용할 DB의 username, 따로 설정하지 않았다면 root가 기본
@@ -56,6 +58,10 @@ watch mode로 실행하기 전에,
 - DB_NAME : 사용할 DB의 이름
 - EMAIL_USER : 회원가입 시 인증코드를 보내주는 계정의 이메일
 - EMAIL_PASS : 회원가입 시 인증코드를 보내주는 계정의 비밀번호
+- ACCESS_TOKEN_SECRET_KEY : Access token의 secret key
+- ACCESS_TOKEN_EXPIRATION_TIME : Access token의 유효기간(단위 : s)
+- REFRESH_TOKEN_SECRET_KEY : Refresh token의 secret key
+- REFRESH_TOKEN_EXPIRATION_TIME : Refresh token의 유효기간(단위 : s)
 
 > (Gmail 기준) EMAIL_USER에 사용할 계정은
 >
@@ -97,11 +103,11 @@ watch mode로 실행하기 전에,
     - 따로 설정하지 않아도 response JSON object의 url로 Redirect됨
 
     {
-        url: 'http://localhost:3000/users/email_verify',
+        url: 'http://localhost:3000/users/email_verify?signupVerifyToken=${signupVerifyToken}',
     }
     ```
 
-> POST /users/email_verify
+> POST /users/email_verify?signupVerifyToken=${signupVerifyToken}
 
 - 인증코드 확인
 
@@ -120,11 +126,11 @@ watch mode로 실행하기 전에,
     - 따로 설정하지 않아도 response JSON object의 url로 Redirect됨
 
     {
-        url: 'http://localhost:3000/users',
+        url: 'http://localhost:3000/users?signupVerifyToken=${signupVerifyToken}',
     }
     ```
 
-> POST /users
+> POST /users?signupVerifyToken=${signupVerifyToken}
 
 - 회원가입(이메일을 제외한 나머지 정보)
 
@@ -154,11 +160,11 @@ watch mode로 실행하기 전에,
     - 따로 설정하지 않아도 response JSON object의 url로 Redirect됨
 
     {
-        url: 'http://localhost:3000/users/login',
+        url: 'http://localhost:3000/users/auth/login',
     }
     ```
 
-> POST /users/login
+> POST /users/auth/login
 
 - 로그인
 
@@ -180,6 +186,64 @@ watch mode로 실행하기 전에,
 
     {
         url: 'http://localhost:3000/main(미정)',
+    }
+
+
+    -> 성공시 Response의 cookies에 access_token, refresh_token 생성
+    ```
+
+> **로그인 이후 공통 Response**
+
+```
+  - Access token이나 Refresh token이 request의 cookie에 없을 경우
+  {
+      "statusCode": 401,
+      "message": "Access or Refresh token not sent",
+      "error": "Unauthorized"
+  }
+
+  - Access token이나 Refresh token이 유효하지 않은 경우
+  {
+      "statusCode": 401,
+      "message": "Invalid access or refresh token",
+      "error": "Unauthorized"
+  }
+
+  - Access token이나 Refresh token이 만료된 경우
+  {
+      "statusCode": 401,
+      "message": "Expired access or refresh token",
+      "error": "Unauthorized"
+  }
+```
+
+> POST /users/auth/logout
+
+- 로그아웃
+
+  - 성공 시 response
+
+    ```
+    - 따로 설정하지 않아도 response JSON object의 url로 Redirect됨
+
+    {
+        url: 'http://localhost:3000/users/auth/login',
+    }
+    ```
+
+> GET /users
+
+- 프로필 조회
+
+  - 성공 시 response
+
+    ```
+    {
+        "email": "example@email.com",
+        "name": "Name",
+        "gender": "male",
+        "address": "address",
+        "position": "FW"
     }
     ```
 

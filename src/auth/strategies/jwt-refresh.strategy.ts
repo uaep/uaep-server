@@ -4,12 +4,16 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh-token',
+) {
   constructor(private readonly config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromHeader('ACCESS_TOKEN'),
+      jwtFromRequest: ExtractJwt.fromHeader('REFRESH_TOKEN'),
       ignoreExpiration: true,
-      secretOrKey: config.get('ACCESS_TOKEN_SECRET_KEY'),
+      secretOrKey: config.get('REFRESH_TOKEN_SECRET_KEY'),
+      passReqToCallback: true,
     });
   }
 }

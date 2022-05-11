@@ -24,6 +24,14 @@ export class UserService {
     private readonly config: ConfigService,
   ) {}
 
+  async testCreateUser(user: CreateUserDto) {
+    const newUser = await this.userRepository.create({
+      email: 'kisboo0803@gmail.com',
+      ...user,
+    });
+    await this.userRepository.save(newUser);
+  }
+
   async createUser(
     signupVerifyToken: string,
     user: CreateUserDto,
@@ -77,8 +85,14 @@ export class UserService {
 
   async getProfile(email: string) {
     const user = await this.userRepository.findOne({ email });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { uid, password, createdAt, updatedAt, ...profile } = user;
+    const {
+      uid,
+      password,
+      createdAt,
+      updatedAt,
+      currentHashedRefreshToken,
+      ...profile
+    } = user;
     return profile;
   }
 }

@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { IsEmail, IsEnum } from 'class-validator';
 import { GENDER, POSITION } from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
+import { Exclude } from 'class-transformer';
 
 @Entity({ name: 'user' })
 export class UserEntity {
@@ -44,7 +45,8 @@ export class UserEntity {
   updatedAt: Date;
 
   @Column({ nullable: true })
-  token: string;
+  @Exclude()
+  currentHashedRefreshToken?: string;
 
   @BeforeInsert()
   async hashPassword(): Promise<void> {

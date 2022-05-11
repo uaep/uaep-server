@@ -5,14 +5,17 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtRefreshGuard } from 'src/auth/jwt-refresh.guard';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './users.service';
+import { Response } from 'express';
 
 @Controller('users')
 export class UserController {
@@ -21,6 +24,12 @@ export class UserController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
   ) {}
+
+  @Post('/test')
+  async testCreate(@Body() user: CreateUserDto) {
+    await this.userService.testCreateUser(user);
+    return { url: `${this.config.get('BASE_URL')}/users/login` };
+  }
 
   @Post('/email_validity_checks')
   async emailValidityCheck(@Body() { email }) {
@@ -51,22 +60,67 @@ export class UserController {
     @Body() user: CreateUserDto,
   ) {
     await this.userService.createUser(signupVerifyToken, user);
-    return { url: `${this.config.get('BASE_URL')}/users/login` };
+    return { url: `${this.config.get('BASE_URL')}/users/auth/login` };
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('/auth/login')
-  async login(@Req() req) {
-    return this.authService.login(req.user);
+  async login(@Req() req, @Res({ passthrough: true }) res: Response) {
+    const { access_token, refresh_token } = await this.authService.login(
+      req.user.email,
+    );
+
+    const cookieOptions = {
+      domain: this.config
+        .get('BASE_URL')
+        .substring(
+          this.config.get('BASE_URL').indexOf('://') + 3,
+          this.config.get('BASE_URL').lastIndexOf(':'),
+        ),
+      httpOnly: true,
+    };
+
+    res.cookie('access_token', access_token, cookieOptions);
+    res.cookie('refresh_token', refresh_token, cookieOptions);
+
     // TODO : Redirect to Main Page
-    // return {
-    //   url: 'Main Page'
-    // }
+    return {
+      url: `${this.config.get('BASE_URL')}/main`,
+    };
+  }
+
+  @UseGuards(JwtRefreshGuard)
+  @Post('/auth/logout')
+  async logout(@Req() req, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.user.email);
+    const cookieResetOptions = {
+      maxAge: 0,
+    };
+    res.cookie('access_token', '', cookieResetOptions);
+    res.cookie('refresh_token', '', cookieResetOptions);
+    return { url: `${this.config.get('BASE_URL')}/users/login` };
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
   getProfile(@Req() req) {
     return this.userService.getProfile(req.user.email);
+  }
+
+  @UseGuards(JwtRefreshGuard)
+  @Get('/auth/refresh')
+  refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
+    const user = req.user;
+    const access_token = this.authService.getAccessToken(user.email);
+    const cookieOptions = {
+      domain: this.config
+        .get('BASE_URL')
+        .substring(
+          this.config.get('BASE_URL').indexOf('://') + 3,
+          this.config.get('BASE_URL').lastIndexOf(':'),
+        ),
+      httpOnly: true,
+    };
+    res.cookie('access_token', access_token, cookieOptions);
   }
 }
