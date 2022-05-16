@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import * as Joi from 'joi';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { GamesModule } from './games/games.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthModule } from './auth/auth.module';
         ACCESS_TOKEN_EXPIRATION_TIME: Joi.number().required(),
         REFRESH_TOKEN_SECRET_KEY: Joi.string().required(),
         REFRESH_TOKEN_EXPIRATION_TIME: Joi.number().required(),
+        POSITION_CHANGE_POINT: Joi.number().required(),
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -49,6 +51,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     UsersModule,
     AuthModule,
+    GamesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

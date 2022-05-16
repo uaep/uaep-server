@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from 'src/auth/auth.module';
 import { EmailService } from 'src/email/email.service';
 import { UserEntity } from './entities/user.entity';
-import { VerificationEntity } from './entities/verification.entity';
+import { VerificationEntity } from '../email/entities/verification.entity';
 import { UserController } from './users.controller';
 import { UserService } from './users.service';
 

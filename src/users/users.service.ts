@@ -10,8 +10,9 @@ import { EmailService } from 'src/email/email.service';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserEntity } from './entities/user.entity';
-import { VerificationEntity } from './entities/verification.entity';
+import { VerificationEntity } from '../email/entities/verification.entity';
 import * as uuid from 'uuid';
+import { EditUserDto } from './dto/edit-user.dto';
 
 @Injectable()
 export class UserService {
@@ -24,11 +25,8 @@ export class UserService {
     private readonly config: ConfigService,
   ) {}
 
-  async testCreateUser(user: CreateUserDto) {
-    const newUser = await this.userRepository.create({
-      email: 'kisboo0803@gmail.com',
-      ...user,
-    });
+  async testCreateUser(user) {
+    const newUser = this.userRepository.create(user);
     await this.userRepository.save(newUser);
   }
 
@@ -86,7 +84,7 @@ export class UserService {
   async getProfile(email: string) {
     const user = await this.userRepository.findOne({ email });
     const {
-      uid,
+      id,
       password,
       createdAt,
       updatedAt,
@@ -94,5 +92,26 @@ export class UserService {
       ...profile
     } = user;
     return profile;
+  }
+
+  async editProfile(email: string, user: EditUserDto) {
+    const userProfile = await this.userRepository.findOne({ email });
+    if (user.position !== userProfile.position) {
+      if (
+        userProfile.position_change_point <
+        this.config.get('POSITION_CHANGE_POINT')
+      ) {
+        throw new BadRequestException(
+          `Not enough points : ${userProfile.position_change_point}`,
+        );
+      }
+      userProfile.position_change_point -= this.config.get(
+        'POSITION_CHANGE_POINT',
+      );
+      userProfile.position = user.position;
+    }
+    userProfile.name = user.name ? user.name : userProfile.name;
+    userProfile.address = user.address ? user.address : userProfile.address;
+    await this.userRepository.save(userProfile);
   }
 }

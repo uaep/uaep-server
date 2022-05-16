@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Query,
   Req,
@@ -16,6 +17,7 @@ import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './users.service';
 import { Response } from 'express';
+import { EditUserDto } from './dto/edit-user.dto';
 
 @Controller('users')
 export class UserController {
@@ -26,7 +28,7 @@ export class UserController {
   ) {}
 
   @Post('/test')
-  async testCreate(@Body() user: CreateUserDto) {
+  async testCreate(@Body() user) {
     await this.userService.testCreateUser(user);
     return { url: `${this.config.get('BASE_URL')}/users/login` };
   }
@@ -90,6 +92,23 @@ export class UserController {
   }
 
   @UseGuards(JwtRefreshGuard)
+  @Get('/auth/refresh')
+  refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
+    const user = req.user;
+    const access_token = this.authService.getAccessToken(user.email);
+    const cookieOptions = {
+      domain: this.config
+        .get('BASE_URL')
+        .substring(
+          this.config.get('BASE_URL').indexOf('://') + 3,
+          this.config.get('BASE_URL').lastIndexOf(':'),
+        ),
+      httpOnly: true,
+    };
+    res.cookie('access_token', access_token, cookieOptions);
+  }
+
+  @UseGuards(JwtRefreshGuard)
   @Post('/auth/logout')
   async logout(@Req() req, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(req.user.email);
@@ -107,20 +126,10 @@ export class UserController {
     return this.userService.getProfile(req.user.email);
   }
 
-  @UseGuards(JwtRefreshGuard)
-  @Get('/auth/refresh')
-  refresh(@Req() req, @Res({ passthrough: true }) res: Response) {
-    const user = req.user;
-    const access_token = this.authService.getAccessToken(user.email);
-    const cookieOptions = {
-      domain: this.config
-        .get('BASE_URL')
-        .substring(
-          this.config.get('BASE_URL').indexOf('://') + 3,
-          this.config.get('BASE_URL').lastIndexOf(':'),
-        ),
-      httpOnly: true,
-    };
-    res.cookie('access_token', access_token, cookieOptions);
+  @UseGuards(JwtAuthGuard)
+  @Patch()
+  async editProfile(@Req() req, @Body() user: EditUserDto) {
+    await this.userService.editProfile(req.user.email, user);
+    return { url: `${this.config.get('BASE_URL')}/users` };
   }
 }
