@@ -25,9 +25,11 @@ export class UserService {
     private readonly config: ConfigService,
   ) {}
 
-  async testCreateUser(user) {
-    const newUser = this.userRepository.create(user);
-    await this.userRepository.save(newUser);
+  async testCreateUser(users) {
+    users.forEach(async (user) => {
+      const newUser = this.userRepository.create(user);
+      await this.userRepository.save(newUser);
+    });
   }
 
   async createUser(
@@ -113,5 +115,13 @@ export class UserService {
     userProfile.name = user.name ? user.name : userProfile.name;
     userProfile.address = user.address ? user.address : userProfile.address;
     await this.userRepository.save(userProfile);
+  }
+
+  async getAllReviews(email: string) {
+    const user = await this.userRepository.findOne(
+      { email },
+      { relations: ['reviews'] },
+    );
+    return user.reviews;
   }
 }

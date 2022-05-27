@@ -3,7 +3,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToOne,
+  JoinTable,
+  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,7 +13,7 @@ import { IsEmail, IsEnum } from 'class-validator';
 import { GENDER, POSITION } from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
 import { Exclude } from 'class-transformer';
-import { GameEntity } from 'src/games/entities/game.entity';
+import { GameReviewEntity } from 'src/games/entities/game-review.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity {
@@ -23,7 +24,7 @@ export class UserEntity {
   @IsEmail()
   email: string;
 
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column()
@@ -56,10 +57,12 @@ export class UserEntity {
   @Exclude()
   currentHashedRefreshToken?: string;
 
-  @ManyToOne((type) => GameEntity, (game) => game.users, {
-    onDelete: 'SET NULL',
-  })
-  game?: GameEntity;
+  @ManyToMany(() => GameReviewEntity)
+  @JoinTable()
+  reviews?: GameReviewEntity[];
+
+  // @ManyToMany((type) => GameEntity, (game) => game.teamMember)
+  // game?: GameEntity[];
 
   @BeforeInsert()
   async hashPassword(): Promise<void> {

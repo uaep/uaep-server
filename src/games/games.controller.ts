@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -28,7 +30,8 @@ export class GamesController {
 
   @Post()
   async createGame(@Req() req, @Body() game: CreateGameDto) {
-    await this.gameService.createGame(req.user, game);
+    const createdGame = await this.gameService.createGame(req.user, game);
+    return { url: `${this.config.get('BASE_URL')}/games/${createdGame.id}` };
   }
 
   @Get('/:id')
@@ -36,9 +39,48 @@ export class GamesController {
     return await this.gameService.getGame(id);
   }
 
-  @Post(':id')
-  async join(@Req() req, @Param('id') id: number) {
-    await this.gameService.join(req.user, id);
-    return { url: `${this.config.get('BASE_URL')}/games/${id}` };
+  @Patch('/:id/:teamType/captain')
+  async captainAppointment(
+    @Req() req,
+    @Param('id') id: number,
+    @Param('teamType') teamType: string,
+    @Body() { name },
+  ) {
+    await this.gameService.captainAppointment(req.user, id, teamType, name);
+  }
+
+  @Patch('/:id/:teamType/:position')
+  async selectPosition(
+    @Req() req,
+    @Param('id') id: number,
+    @Param('teamType') teamType: string,
+    @Param('position') position: string,
+  ) {
+    return await this.gameService.selectPosition(
+      req.user,
+      id,
+      teamType,
+      position,
+    );
+  }
+
+  @Patch('/:id/:teamType')
+  async selectFormation(
+    @Req() req,
+    @Param('id') id: number,
+    @Param('teamType') teamType: string,
+    @Body() { formation },
+  ) {
+    return await this.gameService.selectFormation(
+      req.user,
+      id,
+      teamType,
+      formation,
+    );
+  }
+
+  @Delete('/:id')
+  async finishGame(@Req() req, @Param('id') id: number) {
+    await this.gameService.finishGame(req.user, id);
   }
 }

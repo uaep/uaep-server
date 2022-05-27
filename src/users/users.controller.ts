@@ -28,9 +28,9 @@ export class UserController {
   ) {}
 
   @Post('/test')
-  async testCreate(@Body() user) {
-    await this.userService.testCreateUser(user);
-    return { url: `${this.config.get('BASE_URL')}/users/login` };
+  async testCreate(@Body() { users }) {
+    await this.userService.testCreateUser(users);
+    return { url: `${this.config.get('BASE_URL')}/users/auth/login` };
   }
 
   @Post('/email_validity_checks')
@@ -85,9 +85,8 @@ export class UserController {
     res.cookie('access_token', access_token, cookieOptions);
     res.cookie('refresh_token', refresh_token, cookieOptions);
 
-    // TODO : Redirect to Main Page
     return {
-      url: `${this.config.get('BASE_URL')}/main`,
+      url: `${this.config.get('BASE_URL')}/games`,
     };
   }
 
@@ -124,6 +123,12 @@ export class UserController {
   @Get()
   getProfile(@Req() req) {
     return this.userService.getProfile(req.user.email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/reviews')
+  async getAllReviews(@Req() req) {
+    return await this.userService.getAllReviews(req.user.email);
   }
 
   @UseGuards(JwtAuthGuard)

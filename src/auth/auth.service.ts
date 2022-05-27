@@ -58,7 +58,7 @@ export class AuthService {
     if (isRefreshTokenMatch) {
       return true;
     } else {
-      throw new UnauthorizedException('invalid signature');
+      throw new UnauthorizedException('Invalid Signature');
     }
   }
 
@@ -71,7 +71,6 @@ export class AuthService {
         currentHashedRefreshToken,
       },
     );
-    // TODO : return 하지 않고 header or cookie로 넘길 것
     return {
       access_token: this.getAccessToken(email),
       refresh_token: refresh_token,
