@@ -14,6 +14,7 @@ import { GENDER, POSITION } from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
 import { Exclude } from 'class-transformer';
 import { GameReviewEntity } from 'src/games/entities/game-review.entity';
+import { GameEntity } from 'src/games/entities/game.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity {
@@ -61,8 +62,9 @@ export class UserEntity {
   @JoinTable()
   reviews?: GameReviewEntity[];
 
-  // @ManyToMany((type) => GameEntity, (game) => game.teamMember)
-  // game?: GameEntity[];
+  @ManyToMany((type) => GameEntity, (game) => game.users)
+  @JoinTable()
+  games?: GameEntity[];
 
   @BeforeInsert()
   async hashPassword(): Promise<void> {

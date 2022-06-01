@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  MethodNotAllowedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -83,22 +84,48 @@ export class UserService {
     }
   }
 
-  async getProfile(email: string) {
-    const user = await this.userRepository.findOne({ email });
-    const {
-      id,
-      password,
-      createdAt,
-      updatedAt,
-      currentHashedRefreshToken,
-      ...profile
-    } = user;
-    return profile;
+  async getProfile(email: string, requester?) {
+    const user = await this.userRepository.findOne(
+      { email },
+      { relations: ['games'] },
+    );
+    if (requester === email) {
+      const {
+        id,
+        password,
+        createdAt,
+        updatedAt,
+        currentHashedRefreshToken,
+        ...profile
+      } = user;
+      return profile;
+    } else {
+      const {
+        id,
+        password,
+        createdAt,
+        updatedAt,
+        currentHashedRefreshToken,
+        position_change_point,
+        games,
+        ...profile
+      } = user;
+      return profile;
+    }
   }
 
   async editProfile(email: string, user: EditUserDto) {
-    const userProfile = await this.userRepository.findOne({ email });
+    const userProfile = await this.userRepository.findOne(
+      { email },
+      { relations: ['games'] },
+    );
+
     if (user.position !== userProfile.position) {
+      if (userProfile.games.length !== 0) {
+        throw new MethodNotAllowedException(
+          'Precondition : Deselect positions in all participating games',
+        );
+      }
       if (
         userProfile.position_change_point <
         this.config.get('POSITION_CHANGE_POINT')
@@ -112,6 +139,16 @@ export class UserService {
       );
       userProfile.position = user.position;
     }
+
+    if (user.name && user.name !== userProfile.name) {
+      const existedName = await this.userRepository.findOne({
+        name: user.name,
+      });
+      if (existedName) {
+        throw new UnprocessableEntityException('This name is already taken.');
+      }
+    }
+
     userProfile.name = user.name ? user.name : userProfile.name;
     userProfile.address = user.address ? user.address : userProfile.address;
     await this.userRepository.save(userProfile);

@@ -1,4 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { IsEnum } from 'class-validator';
+import { GENDER } from 'config/constants';
+import { UserEntity } from 'src/users/entities/user.entity';
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'game' })
 export class GameEntity {
@@ -14,27 +17,19 @@ export class GameEntity {
   @Column()
   number_of_users: string;
 
+  @Column({ type: 'enum', enum: GENDER })
+  @IsEnum(GENDER)
+  gender: GENDER;
+
   @Column()
   host: string;
 
-  // TODO : 모든 user가 방을 나간 경우를 판단하기 위한 Column 필요
-  // ex. 방 안에 존재하는 모든 user를 가지고 있는 array?
+  @ManyToMany((type) => UserEntity, (user) => user.games)
+  users?: UserEntity[];
 
   @Column({ type: 'json', nullable: true })
   teamA?: object;
 
   @Column({ type: 'json', nullable: true })
   teamB?: object;
-
-  // @ManyToMany((type) => UserEntity)
-  // @JoinTable()
-  // teamAMember?: UserEntity[];
-
-  // @ManyToMany((type) => UserEntity)
-  // @JoinTable()
-  // teamBMember?: UserEntity[];
-
-  // @ManyToMany((type) => UserEntity, (user) => user.game)
-  // @JoinTable()
-  // teamMember?: UserEntity[];
 }

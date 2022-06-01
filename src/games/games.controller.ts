@@ -35,8 +35,8 @@ export class GamesController {
   }
 
   @Get('/:id')
-  async getGame(@Param('id') id: number): Promise<GameEntity> {
-    return await this.gameService.getGame(id);
+  async getGame(@Req() req, @Param('id') id: number): Promise<GameEntity> {
+    return await this.gameService.getGame(req.user, id);
   }
 
   @Patch('/:id/:teamType/captain')
@@ -79,8 +79,12 @@ export class GamesController {
     );
   }
 
-  @Delete('/:id')
-  async finishGame(@Req() req, @Param('id') id: number) {
-    await this.gameService.finishGame(req.user, id);
+  @Delete('/:id/:teamType')
+  async finishGame(
+    @Req() req,
+    @Param('id') id: number,
+    @Param('teamType') teamType: string,
+  ) {
+    await this.gameService.finishGame(req.user, id, teamType);
   }
 }

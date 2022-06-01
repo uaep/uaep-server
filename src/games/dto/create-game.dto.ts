@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
-import { PLAYER_NUMBERS } from 'config/constants';
+import { GENDER, PLAYER_NUMBERS } from 'config/constants';
 
 export class CreateGameDto {
   @IsNumber()
@@ -29,4 +29,8 @@ export class CreateGameDto {
   @IsEnum(PLAYER_NUMBERS)
   @IsNotEmpty()
   number_of_users: PLAYER_NUMBERS;
+
+  @IsEnum(GENDER)
+  @IsNotEmpty()
+  gender: GENDER;
 }

@@ -1,10 +1,12 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
+  MethodNotAllowedException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FORMATIONS } from 'config/constants';
+import { FORMATIONS, GENDER } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateGameDto } from './dto/create-game.dto';
@@ -36,13 +38,28 @@ export class GamesService {
     return gameLists;
   }
 
-  async getGame(gameId: number) {
-    const users = await this.gameRepository.findOne({ id: gameId });
-    return users;
+  async getGame(user, gameId: number) {
+    const currentUser = await this.userRepository.findOne({
+      email: user.email,
+    });
+    const game = await this.gameRepository.findOne({ id: gameId });
+    if (game) {
+      if (game.gender !== GENDER.ANY && game.gender !== currentUser.gender) {
+        throw new ForbiddenException(
+          `You can't enter the game : only for ${game.gender}`,
+        );
+      }
+    }
+    return game;
   }
 
   async createGame(user, game: CreateGameDto) {
     const host = await this.userRepository.findOne({ email: user.email });
+    if (game.gender !== host.gender && game.gender !== GENDER.ANY) {
+      throw new ForbiddenException(
+        `You can't create a game for ${game.gender}`,
+      );
+    }
     const newGame = this.gameRepository.create({
       host: host.name,
       date: convert(
@@ -57,6 +74,7 @@ export class GamesService {
       ).toDate(),
       place: game.place,
       number_of_users: game.number_of_users,
+      gender: game.gender,
     });
     return await this.gameRepository.save(newGame);
   }
@@ -67,7 +85,27 @@ export class GamesService {
     teamType: string,
     formation: string,
   ) {
+    const opponentType = teamType === 'A' ? 'B' : 'A';
     const game = await this.gameRepository.findOne({ id: gameId });
+    if (game[`team${opponentType}`] !== null) {
+      for (const [key, value] of Object.entries(game[`team${opponentType}`])) {
+        if (value === null) {
+          continue;
+        }
+        if (value['email'] === user.email) {
+          if (key === 'CAPTAIN') {
+            throw new MethodNotAllowedException(
+              `Can't select team${teamType}'s formation : You are captain of team${opponentType}`,
+            );
+          } else {
+            throw new MethodNotAllowedException(
+              `Can't select team${teamType}'s formation : You already belong to team${opponentType}`,
+            );
+          }
+        }
+      }
+    }
+
     if (
       game[`team${teamType}`] &&
       game[`team${teamType}`]['CAPTAIN'].email !== user.email
@@ -76,6 +114,20 @@ export class GamesService {
         `Authority Required : Captain of team${teamType}`,
       );
     }
+
+    if (game[`team${teamType}`]) {
+      for (const [key, value] of Object.entries(game[`team${teamType}`])) {
+        if (key === 'CAPTAIN') {
+          continue;
+        }
+        if (value !== null) {
+          throw new MethodNotAllowedException(
+            `Can't change team${teamType}'s formation`,
+          );
+        }
+      }
+    }
+
     switch (FORMATIONS[formation]) {
       case FORMATIONS.F131:
         game[`team${teamType}`] = FORMATIONS_DETAIL[FORMATIONS.F131];
@@ -119,9 +171,12 @@ export class GamesService {
           newCaptain.email,
         );
         await this.gameRepository.save(game);
-        break;
+        return;
       }
     }
+    throw new NotFoundException(
+      `There is no user who named ${newCaptainName} in team${teamType}`,
+    );
   }
 
   async selectPosition(
@@ -130,12 +185,14 @@ export class GamesService {
     teamType: string,
     position: string,
   ) {
-    // TODO : A팀 captain인 경우 B팀 captain이 될 수 없음
-    // TODO : A팀 captain인 경우 B팀으로 변경 불가 -> A팀 팀원에 captain 양도 후 B팀으로 변경 가능
-    // TODO : 팀원(본인 포함)이 있는 경우는 포메이션 변경 불가
-    // TODO : 내가 이미 포지션을 선택 한 경우, 취소하기 전에는 다른 포지션 선택 불가
+    const game = await this.gameRepository.findOne(
+      { id: gameId },
+      { relations: ['users'] },
+    );
 
-    const game = await this.gameRepository.findOne({ id: gameId });
+    if (game[`team${teamType}`] === null) {
+      throw new NotFoundException(`team${teamType} doesn't have formation yet`);
+    }
 
     if (!Object.keys(game[`team${teamType}`]).includes(position)) {
       throw new NotFoundException(`Invalid Position : ${position}`);
@@ -146,6 +203,9 @@ export class GamesService {
         return game[`team${teamType}`][position];
       } else {
         game[`team${teamType}`][position] = null;
+        game.users = game.users.filter((gamer) => {
+          return gamer.email !== user.email;
+        });
         return await this.gameRepository.save(game);
       }
     }
@@ -153,6 +213,7 @@ export class GamesService {
     const currentUser = await this.userRepository.findOne({
       email: user.email,
     });
+
     if (position.replace(/[0-9]/g, '') !== currentUser.position) {
       throw new ForbiddenException(
         `Your position is ${
@@ -160,18 +221,54 @@ export class GamesService {
         }, but you choose ${position.replace(/[0-9]/g, '')}`,
       );
     }
+
+    if (game['teamA']) {
+      for (const [key, value] of Object.entries(game['teamA'])) {
+        if (key.replace(/[0-9]/g, '') === currentUser.position) {
+          if (value === null) {
+            continue;
+          }
+          if (value['email'] === currentUser.email) {
+            throw new ConflictException(`You already select teamA : ${key}`);
+          }
+        }
+      }
+    }
+    if (game['teamB']) {
+      for (const [key, value] of Object.entries(game['teamB'])) {
+        if (key.replace(/[0-9]/g, '') === currentUser.position) {
+          if (value === null) {
+            continue;
+          }
+          if (value['email'] === currentUser.email) {
+            throw new ConflictException(`You already select teamB : ${key}`);
+          }
+        }
+      }
+    }
+
     game[`team${teamType}`][position] = await this.userService.getProfile(
       currentUser.email,
     );
+    if (!game.users.includes(currentUser)) {
+      game.users.push(currentUser);
+    }
     return await this.gameRepository.save(game);
   }
 
-  async finishGame(user, gameId: number) {
-    const game = await this.gameRepository.findOne({ id: gameId });
+  async finishGame(user, gameId: number, teamType: string) {
+    const game = await this.gameRepository.findOne(
+      { id: gameId },
+      { relations: ['users'] },
+    );
+    if (game[`team${teamType}`]['CAPTAIN'].email !== user.email) {
+      throw new ForbiddenException(
+        `Authority Required : Captain of team${teamType}`,
+      );
+    }
     if (game.date > convert(LocalDateTime.now()).toDate()) {
       throw new ForbiddenException('The game is not over');
     }
-    // TODO : user가 captain인지 권한 확인
     const newReview = this.reviewRepository.create({
       id: game.id,
       date: game.date,
@@ -183,29 +280,23 @@ export class GamesService {
     });
     const review = await this.reviewRepository.save(newReview);
 
-    // TODO : game.teamA가 존재하지 않을 경우
-    Object.keys(game.teamA).forEach(async (position) => {
+    Object.values(game[`team${teamType}`]).forEach(async (playUser) => {
       const playedUser = await this.userRepository.findOne(
         {
-          email: game.teamA[position].email,
+          email: playUser['email'],
         },
         { relations: ['reviews'] },
       );
       playedUser['reviews'].push(review);
       await this.userRepository.save(playedUser);
+      game.users = game.users.filter((user) => {
+        return user.email !== playUser['email'];
+      });
+      await this.gameRepository.save(game);
     });
 
-    Object.keys(game.teamB).forEach(async (position) => {
-      const playedUser = await this.userRepository.findOne(
-        {
-          email: game.teamB[position].email,
-        },
-        { relations: ['reviews'] },
-      );
-      playedUser['reviews'].push(review);
-      await this.userRepository.save(playedUser);
-    });
-
-    await this.gameRepository.remove(game);
+    if (game.users.length === 0) {
+      await this.gameRepository.remove(game);
+    }
   }
 }

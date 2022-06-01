@@ -122,7 +122,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Get()
   getProfile(@Req() req) {
-    return this.userService.getProfile(req.user.email);
+    return this.userService.getProfile(req.user.email, req.user.email);
   }
 
   @UseGuards(JwtAuthGuard)
