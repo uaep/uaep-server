@@ -152,6 +152,7 @@ export class UserService {
     userProfile.name = user.name ? user.name : userProfile.name;
     userProfile.address = user.address ? user.address : userProfile.address;
     await this.userRepository.save(userProfile);
+    return this.getProfile(email, email);
   }
 
   async getAllReviews(email: string) {

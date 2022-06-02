@@ -134,7 +134,6 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Patch()
   async editProfile(@Req() req, @Body() user: EditUserDto) {
-    await this.userService.editProfile(req.user.email, user);
-    return { url: `${this.config.get('BASE_URL')}/users` };
+    return await this.userService.editProfile(req.user.email, user);
   }
 }

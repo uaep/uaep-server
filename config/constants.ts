@@ -1,9 +1,9 @@
 export const DOMAIN = ['gmail.com', 'naver.com'];
 
 export enum GENDER {
-  MALE = 'male',
-  FEMALE = 'female',
-  ANY = 'any',
+  MALE = '남성',
+  FEMALE = '여성',
+  ANY = '성별 무관',
 }
 
 export enum POSITION {
