@@ -1,5 +1,5 @@
 import { IsEnum } from 'class-validator';
-import { GENDER } from 'config/constants';
+import { GAME_STATUS, GENDER } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 
@@ -32,4 +32,8 @@ export class GameEntity {
 
   @Column({ type: 'json', nullable: true })
   teamB?: object;
+
+  @Column({ type: 'enum', enum: GAME_STATUS, default: GAME_STATUS.AVAILABLE })
+  @IsEnum(GAME_STATUS)
+  status: GAME_STATUS;
 }

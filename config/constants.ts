@@ -23,3 +23,8 @@ export enum PLAYER_NUMBERS {
   v6 = '6v6',
   v5 = '5v5',
 }
+
+export enum GAME_STATUS {
+  AVAILABLE = '참가 가능',
+  CLOSED = '마감',
+}

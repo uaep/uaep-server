@@ -6,12 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CreateGameDto } from './dto/create-game.dto';
+import { QueryFiltersDto } from './dto/query-filters.dto';
 import { GameEntity } from './entities/game.entity';
 import { GamesService } from './games.service';
 
@@ -24,8 +26,8 @@ export class GamesController {
   ) {}
 
   @Get()
-  async getAllGames(): Promise<GameEntity[]> {
-    return await this.gameService.getAllGames();
+  async getAllGames(@Query() filters: QueryFiltersDto): Promise<GameEntity[]> {
+    return await this.gameService.getAllGames(filters);
   }
 
   @Post()

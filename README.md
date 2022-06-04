@@ -251,7 +251,7 @@ watch mode로 실행하기 전에,
   >   {
   >       "email": "example@email.com",
   >       "name": "Name",
-  >       "gender": "male",
+  >       "gender": "남성",
   >       "address": "address",
   >       "position": "FW",
   >       "level_point": 0,
@@ -279,7 +279,14 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "url": "http://localhost:3000/users"
+  >       "email": "example@email.com",
+  >       "name": "Name",
+  >       "gender": "남성",
+  >       "address": "address",
+  >       "position": "FW",
+  >       "level_point": 0,
+  >       "position_change_point": 30,
+  >       "games": []
   >   }
   >   ```
   >
@@ -312,6 +319,23 @@ watch mode로 실행하기 전에,
 
   > 게임 방 전체 리스트
   >
+  > - Query parameters for filtering
+  >
+  >   - month
+  >     - 1 ~ 12
+  >     - default = 현재 월(ex. 오늘이 6/3일 경우 month = 6)
+  >   - day
+  >     - 1 ~ (30|31)
+  >     - default = 현재 일(ex. 오늘이 6/3일 경우 day = 3)
+  >   - gender
+  >     - 남성, 여성, 성별 무관
+  >   - status
+  >     - 참가 가능, 마감
+  >   - number_of_users
+  >     - 6v6, 5v5
+  >
+  > - ex) /games?month=6&day=3&gender=남성&status=참가 가능&number_of_users=6v6
+  >
   > - 성공 시 response
   >
   >   ```
@@ -321,7 +345,7 @@ watch mode로 실행하기 전에,
   >           "date": "2022-05-20T18:50:00.000Z",
   >           "place": "수원종합운동장",
   >           "number_of_users": "6v6",
-  >           "gender": "male",
+  >           "gender": "남성",
   >           "host": "방 만든 사람"
   >       },
   >       {
@@ -329,7 +353,7 @@ watch mode로 실행하기 전에,
   >           "date": "2022-05-20T20:30:00.000Z",
   >           "place": "아주대학교 운동장",
   >           "number_of_users": "5v5",
-  >           "gender": "any",
+  >           "gender": "성별 무관",
   >           "host": "방 만든 사람"
   >       }
   >   ]
@@ -350,7 +374,7 @@ watch mode로 실행하기 전에,
   >       "minute" : 50,
   >       "place" : "수원종합운동장",
   >       "number_of_users" : "6v6",
-  >       "gender" : "any"
+  >       "gender" : "성별 무관"
   >   }
   >   ```
   >
@@ -409,7 +433,7 @@ watch mode로 실행하기 전에,
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장2",
   >       "number_of_users": "6v6",
-  >       "gender": "male",
+  >       "gender": "남성",
   >       "host": "방 만든 사람",
   >       "teamA": null,
   >       "teamB": null
@@ -448,7 +472,7 @@ watch mode로 실행하기 전에,
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장",
   >       "number_of_users": "6v6",
-  >       "gender": "male",
+  >       "gender": "남성",
   >       "host": "방 만든 사람",
   >       "teamA": {
   >           "FW1": null,
@@ -460,7 +484,7 @@ watch mode로 실행하기 전에,
   >           "CAPTAIN": {
   >               "email": "test@gmail.com",
   >               "name": "주장 A",
-  >               "gender": "male",
+  >               "gender": "남성",
   >               "address": "address",
   >               "position": "FW",
   >               "level_point": 0
@@ -521,13 +545,13 @@ watch mode로 실행하기 전에,
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장",
   >       "number_of_users": "6v6",
-  >       "gender": "male",
+  >       "gender": "남성",
   >       "host": "방 만든 사람",
   >       "teamA": {
   >           "FW1": {
   >               "email": "test@gmail.com",
   >               "name": "name",
-  >               "gender": "male",
+  >               "gender": "남성",
   >               "address": "address",
   >               "position": "FW",
   >               "level_point": 0
@@ -540,7 +564,7 @@ watch mode로 실행하기 전에,
   >           "CAPTAIN": {
   >               "email": "test@gmail.com",
   >               "name": "주장 A",
-  >               "gender": "male",
+  >               "gender": "남성",
   >               "address": "address",
   >               "position": "FW",
   >               "level_point": 0

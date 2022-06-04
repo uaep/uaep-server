@@ -6,15 +6,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FORMATIONS, GENDER } from 'config/constants';
+import { FORMATIONS, GAME_STATUS, GENDER } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { CreateGameDto } from './dto/create-game.dto';
 import { GameReviewEntity } from './entities/game-review.entity';
 import { GameEntity } from './entities/game.entity';
-import { convert, LocalDateTime } from '@js-joda/core';
+import { convert, LocalDate, LocalDateTime } from '@js-joda/core';
 import { UserService } from 'src/users/users.service';
 import { FORMATIONS_DETAIL } from 'config/formations.config';
+import { QueryFiltersDto } from './dto/query-filters.dto';
 
 @Injectable()
 export class GamesService {
@@ -28,8 +29,35 @@ export class GamesService {
     private readonly userService: UserService,
   ) {}
 
-  async getAllGames() {
-    const games = await this.gameRepository.find();
+  async getAllGames(filters: QueryFiltersDto) {
+    const conditions = {
+      where: {
+        date: Between(
+          convert(
+            LocalDate.of(LocalDate.now()['_year'], filters.month, filters.day),
+          ).toDate(),
+          convert(
+            LocalDate.of(
+              LocalDate.now()['_year'],
+              filters.month,
+              filters.day + 1,
+            ),
+          ).toDate(),
+        ),
+      },
+    };
+    if (filters.gender) {
+      Object.assign(conditions.where, { gender: filters.gender });
+    }
+    if (filters.status) {
+      Object.assign(conditions.where, { status: filters.status });
+    }
+    if (filters.number_of_users) {
+      Object.assign(conditions.where, {
+        number_of_users: filters.number_of_users,
+      });
+    }
+    const games = await this.gameRepository.find(conditions);
     const gameLists = [];
     games.forEach((game) => {
       const { teamA, teamB, ...gameInfo } = game;
@@ -69,7 +97,7 @@ export class GamesService {
           game.day,
           game.hour,
           game.minute,
-          0,
+          1,
         ),
       ).toDate(),
       place: game.place,
@@ -190,6 +218,9 @@ export class GamesService {
       { relations: ['users'] },
     );
 
+    const numberOfUsers = game.number_of_users.split('v');
+    let numberOfSeats = Number(numberOfUsers[0]) + Number(numberOfUsers[1]);
+
     if (game[`team${teamType}`] === null) {
       throw new NotFoundException(`team${teamType} doesn't have formation yet`);
     }
@@ -224,6 +255,9 @@ export class GamesService {
 
     if (game['teamA']) {
       for (const [key, value] of Object.entries(game['teamA'])) {
+        if (key !== 'CAPTAIN' && value !== null) {
+          numberOfSeats -= 1;
+        }
         if (key.replace(/[0-9]/g, '') === currentUser.position) {
           if (value === null) {
             continue;
@@ -236,6 +270,9 @@ export class GamesService {
     }
     if (game['teamB']) {
       for (const [key, value] of Object.entries(game['teamB'])) {
+        if (key !== 'CAPTAIN' && value !== null) {
+          numberOfSeats -= 1;
+        }
         if (key.replace(/[0-9]/g, '') === currentUser.position) {
           if (value === null) {
             continue;
@@ -252,6 +289,9 @@ export class GamesService {
     );
     if (!game.users.includes(currentUser)) {
       game.users.push(currentUser);
+    }
+    if (numberOfSeats === 0) {
+      game.status = GAME_STATUS.CLOSED;
     }
     return await this.gameRepository.save(game);
   }
