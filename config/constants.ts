@@ -28,3 +28,9 @@ export enum GAME_STATUS {
   AVAILABLE = '참가 가능',
   CLOSED = '마감',
 }
+
+export enum REVIEW_STATUS {
+  NOT_FINISHED = '게임 종료 안됨',
+  REVIEW = '리뷰 쓰기',
+  DONE = '완료',
+}

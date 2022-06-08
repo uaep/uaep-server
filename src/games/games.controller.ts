@@ -33,18 +33,18 @@ export class GamesController {
   @Post()
   async createGame(@Req() req, @Body() game: CreateGameDto) {
     const createdGame = await this.gameService.createGame(req.user, game);
-    return { url: `${this.config.get('BASE_URL')}/games/${createdGame.id}` };
+    return { url: `${this.config.get('BASE_URL')}/games/${createdGame.uuid}` };
   }
 
   @Get('/:id')
-  async getGame(@Req() req, @Param('id') id: number): Promise<GameEntity> {
+  async getGame(@Req() req, @Param('id') id: string): Promise<GameEntity> {
     return await this.gameService.getGame(req.user, id);
   }
 
   @Patch('/:id/:teamType/captain')
   async captainAppointment(
     @Req() req,
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Param('teamType') teamType: string,
     @Body() { name },
   ) {
@@ -54,7 +54,7 @@ export class GamesController {
   @Patch('/:id/:teamType/:position')
   async selectPosition(
     @Req() req,
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Param('teamType') teamType: string,
     @Param('position') position: string,
   ) {
@@ -69,7 +69,7 @@ export class GamesController {
   @Patch('/:id/:teamType')
   async selectFormation(
     @Req() req,
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Param('teamType') teamType: string,
     @Body() { formation },
   ) {
@@ -84,7 +84,7 @@ export class GamesController {
   @Delete('/:id/:teamType')
   async finishGame(
     @Req() req,
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Param('teamType') teamType: string,
   ) {
     await this.gameService.finishGame(req.user, id, teamType);

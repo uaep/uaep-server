@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Generated,
   JoinTable,
   ManyToMany,
   PrimaryGeneratedColumn,
@@ -13,13 +14,18 @@ import { IsEmail, IsEnum } from 'class-validator';
 import { GENDER, POSITION } from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
 import { Exclude } from 'class-transformer';
-import { GameReviewEntity } from 'src/games/entities/game-review.entity';
+import { ReviewEntity } from 'src/reviews/entities/review.entity';
 import { GameEntity } from 'src/games/entities/game.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity {
+  // TODO : @PrimaryGeneratedColumn('uuid')
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column()
+  @Generated('uuid')
+  uuid: string;
 
   @Column({ unique: true })
   @IsEmail()
@@ -42,7 +48,7 @@ export class UserEntity {
   @IsEnum(POSITION)
   position: POSITION;
 
-  @Column({ default: 0 })
+  @Column({ type: 'float', default: 0.0 })
   level_point: number;
 
   @Column({ default: 0 })
@@ -58,9 +64,9 @@ export class UserEntity {
   @Exclude()
   currentHashedRefreshToken?: string;
 
-  @ManyToMany(() => GameReviewEntity)
+  @ManyToMany(() => ReviewEntity)
   @JoinTable()
-  reviews?: GameReviewEntity[];
+  reviews?: ReviewEntity[];
 
   @ManyToMany((type) => GameEntity, (game) => game.users)
   @JoinTable()

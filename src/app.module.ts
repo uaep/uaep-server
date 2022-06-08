@@ -7,6 +7,7 @@ import * as Joi from 'joi';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { GamesModule } from './games/games.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { GamesModule } from './games/games.module';
     UsersModule,
     AuthModule,
     GamesModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

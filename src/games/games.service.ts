@@ -6,11 +6,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FORMATIONS, GAME_STATUS, GENDER } from 'config/constants';
+import {
+  FORMATIONS,
+  GAME_STATUS,
+  GENDER,
+  REVIEW_STATUS,
+} from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Between, Repository } from 'typeorm';
 import { CreateGameDto } from './dto/create-game.dto';
-import { GameReviewEntity } from './entities/game-review.entity';
+import { ReviewEntity } from '../reviews/entities/review.entity';
 import { GameEntity } from './entities/game.entity';
 import { convert, LocalDate, LocalDateTime } from '@js-joda/core';
 import { UserService } from 'src/users/users.service';
@@ -24,8 +29,8 @@ export class GamesService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(GameEntity)
     private readonly gameRepository: Repository<GameEntity>,
-    @InjectRepository(GameReviewEntity)
-    private readonly reviewRepository: Repository<GameReviewEntity>,
+    @InjectRepository(ReviewEntity)
+    private readonly reviewRepository: Repository<ReviewEntity>,
     private readonly userService: UserService,
   ) {}
 
@@ -57,26 +62,32 @@ export class GamesService {
         number_of_users: filters.number_of_users,
       });
     }
+    Object.assign(conditions, {
+      order: {
+        date: 'ASC',
+      },
+    });
     const games = await this.gameRepository.find(conditions);
     const gameLists = [];
     games.forEach((game) => {
-      const { teamA, teamB, ...gameInfo } = game;
+      const { id, teamA, teamB, ...gameInfo } = game;
       gameLists.push(gameInfo);
     });
     return gameLists;
   }
 
-  async getGame(user, gameId: number) {
+  async getGame(user, gameId: string) {
     const currentUser = await this.userRepository.findOne({
       email: user.email,
     });
-    const game = await this.gameRepository.findOne({ id: gameId });
-    if (game) {
-      if (game.gender !== GENDER.ANY && game.gender !== currentUser.gender) {
-        throw new ForbiddenException(
-          `You can't enter the game : only for ${game.gender}`,
-        );
-      }
+    const game = await this.gameRepository.findOne({ uuid: gameId });
+    if (!game) {
+      throw new NotFoundException(`Game ${gameId} doesn't exist`);
+    }
+    if (game.gender !== GENDER.ANY && game.gender !== currentUser.gender) {
+      throw new ForbiddenException(
+        `You can't enter the game : only for ${game.gender}`,
+      );
     }
     return game;
   }
@@ -109,12 +120,15 @@ export class GamesService {
 
   async selectFormation(
     user,
-    gameId: number,
+    gameId: string,
     teamType: string,
     formation: string,
   ) {
     const opponentType = teamType === 'A' ? 'B' : 'A';
-    const game = await this.gameRepository.findOne({ id: gameId });
+    const game = await this.gameRepository.findOne({ uuid: gameId });
+    if (!game) {
+      throw new NotFoundException(`Game ${gameId} is not exist`);
+    }
     if (game[`team${opponentType}`] !== null) {
       for (const [key, value] of Object.entries(game[`team${opponentType}`])) {
         if (value === null) {
@@ -169,6 +183,16 @@ export class GamesService {
       default:
         throw new NotFoundException(`${formation} is an unsupported formation`);
     }
+    // TODO : test용 GK 생성 -> 삭제해야함
+    game[`team${teamType}`]['GK'] = {
+      uuid: 'test',
+      email: 'testGK@gmail.com',
+      name: '테스트 골키퍼',
+      gender: '남성',
+      address: '테스트',
+      position: 'GK',
+      level_point: 0,
+    };
     game[`team${teamType}`]['CAPTAIN'] = await this.userService.getProfile(
       user.email,
     );
@@ -177,11 +201,14 @@ export class GamesService {
 
   async captainAppointment(
     user,
-    gameId: number,
+    gameId: string,
     teamType: string,
     newCaptainName: string,
   ) {
-    const game = await this.gameRepository.findOne({ id: gameId });
+    const game = await this.gameRepository.findOne({ uuid: gameId });
+    if (!game) {
+      throw new NotFoundException(`Game ${gameId} is not exist`);
+    }
     if (game[`team${teamType}`]['CAPTAIN'].email !== user.email) {
       throw new ForbiddenException(
         `Authority Required : Captain of team${teamType}`,
@@ -209,15 +236,17 @@ export class GamesService {
 
   async selectPosition(
     user,
-    gameId: number,
+    gameId: string,
     teamType: string,
     position: string,
   ) {
     const game = await this.gameRepository.findOne(
-      { id: gameId },
+      { uuid: gameId },
       { relations: ['users'] },
     );
-
+    if (!game) {
+      throw new NotFoundException(`Game ${gameId} is not exist`);
+    }
     const numberOfUsers = game.number_of_users.split('v');
     let numberOfSeats = Number(numberOfUsers[0]) + Number(numberOfUsers[1]);
 
@@ -296,11 +325,15 @@ export class GamesService {
     return await this.gameRepository.save(game);
   }
 
-  async finishGame(user, gameId: number, teamType: string) {
+  async finishGame(user, gameId: string, teamType: string) {
+    const opponentType = teamType === 'A' ? 'B' : 'A';
     const game = await this.gameRepository.findOne(
-      { id: gameId },
+      { uuid: gameId },
       { relations: ['users'] },
     );
+    if (!game) {
+      throw new NotFoundException(`Game ${gameId} is not exist`);
+    }
     if (game[`team${teamType}`]['CAPTAIN'].email !== user.email) {
       throw new ForbiddenException(
         `Authority Required : Captain of team${teamType}`,
@@ -309,32 +342,67 @@ export class GamesService {
     if (game.date > convert(LocalDateTime.now()).toDate()) {
       throw new ForbiddenException('The game is not over');
     }
-    const newReview = this.reviewRepository.create({
-      id: game.id,
-      date: game.date,
-      place: game.place,
-      number_of_users: game.number_of_users,
-      host: game.host,
-      teamA: game.teamA,
-      teamB: game.teamB,
-    });
-    const review = await this.reviewRepository.save(newReview);
+    let review;
+    if (!game.review_flag) {
+      const newReview = this.reviewRepository.create({
+        id: game.id,
+        date: game.date,
+        place: game.place,
+        number_of_users: game.number_of_users,
+        gender: game.gender,
+        host: game.host,
+        teamA: game.teamA,
+        teamB: game.teamB,
+      });
+      newReview[`team${teamType}_status`] = REVIEW_STATUS.REVIEW;
+      if (newReview[`team${teamType}`]['GK'].rating === undefined) {
+        for (const [key, value] of Object.entries(
+          newReview[`team${teamType}`],
+        )) {
+          if (key === 'CAPTAIN' || value === null) {
+            continue;
+          }
+          Object.assign(newReview[`team${teamType}`][`${key}`], { rating: {} });
+        }
 
-    Object.values(game[`team${teamType}`]).forEach(async (playUser) => {
+        for (const [key, value] of Object.entries(
+          newReview[`team${opponentType}`],
+        )) {
+          if (key === 'CAPTAIN' || value === null) {
+            continue;
+          }
+          Object.assign(newReview[`team${opponentType}`][`${key}`], {
+            rating: {},
+          });
+        }
+      }
+      game.review_flag = true;
+      review = await this.reviewRepository.save(newReview);
+    }
+    if (!review) {
+      review = await this.reviewRepository.findOne({ id: game.id });
+      review[`team${teamType}_status`] = REVIEW_STATUS.REVIEW;
+      await this.reviewRepository.save(review);
+    }
+
+    for (const [key, value] of Object.entries(game[`team${teamType}`])) {
+      // TODO : key === 'GK' 삭제 + value === null일 수가 없음 -------> 게임 시작 전까지 인원이 다 모이지 않은 경우 예외 처리
+      if (key === 'CAPTAIN' || key === 'GK' || value === null) {
+        continue;
+      }
       const playedUser = await this.userRepository.findOne(
         {
-          email: playUser['email'],
+          email: value['email'],
         },
         { relations: ['reviews'] },
       );
       playedUser['reviews'].push(review);
       await this.userRepository.save(playedUser);
       game.users = game.users.filter((user) => {
-        return user.email !== playUser['email'];
+        return user.email !== value['email'];
       });
       await this.gameRepository.save(game);
-    });
-
+    }
     if (game.users.length === 0) {
       await this.gameRepository.remove(game);
     }

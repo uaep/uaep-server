@@ -155,11 +155,11 @@ export class UserService {
     return await this.getProfile(email, email);
   }
 
-  async getAllReviews(email: string) {
-    const user = await this.userRepository.findOne(
-      { email },
-      { relations: ['reviews'] },
-    );
-    return user.reviews;
-  }
+  // async getAllReviews(email: string) {
+  //   const user = await this.userRepository.findOne(
+  //     { email },
+  //     { relations: ['reviews'] },
+  //   );
+  //   return user.reviews;
+  // }
 }
