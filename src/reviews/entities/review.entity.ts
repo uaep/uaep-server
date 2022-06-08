@@ -4,7 +4,6 @@ import { Column, Entity, Generated, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'review' })
 export class ReviewEntity {
-  // TODO : @PrimaryGeneratedColumn('uuid')
   @PrimaryColumn()
   id: number;
 

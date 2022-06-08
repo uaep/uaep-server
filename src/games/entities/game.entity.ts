@@ -11,7 +11,6 @@ import {
 
 @Entity({ name: 'game' })
 export class GameEntity {
-  // TODO : @PrimaryGeneratedColumn('uuid')
   @PrimaryGeneratedColumn()
   id: number;
 

@@ -19,7 +19,6 @@ import { GameEntity } from 'src/games/entities/game.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity {
-  // TODO : @PrimaryGeneratedColumn('uuid')
   @PrimaryGeneratedColumn()
   id: number;
 

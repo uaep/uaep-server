@@ -1,5 +1,9 @@
 import { LocalDateTime } from '@js-joda/core';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { REVIEW_STATUS } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -78,6 +82,9 @@ export class ReviewsService {
   async getReview(user, reviewId: string) {
     let teamType = 'B';
     const review = await this.reviewRepository.findOne({ uuid: reviewId });
+    if (!review) {
+      throw new NotFoundException(`Review ${reviewId} is not exist`);
+    }
     for (const [key, value] of Object.entries(review.teamA)) {
       // TODO : value === null일 수 없음
       if (key === 'CAPTAIN' || value === null) {
@@ -93,11 +100,6 @@ export class ReviewsService {
         `Can't review games that haven't finished yet : ${review.uuid}`,
       );
     }
-    // if (review.status === REVIEW_STATUS.DONE) {
-    //   throw new ForbiddenException(
-    //     `Reviews cannot be edited for games that have been 3 days since the game or have been blocked : ${review.uuid}`,
-    //   );
-    // }
     return review;
   }
 
@@ -113,6 +115,9 @@ export class ReviewsService {
       email: user.email,
     });
     const review = await this.reviewRepository.findOne({ uuid: reviewId });
+    if (!review) {
+      throw new NotFoundException(`Review ${reviewId} is not exist`);
+    }
     if (
       LocalDateTime.parse(review.date.toISOString().replace('Z', ''))
         .plusDays(3)

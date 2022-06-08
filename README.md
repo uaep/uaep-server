@@ -342,6 +342,7 @@ watch mode로 실행하기 전에,
   >   [
   >       {
   >           "id": 1,
+  >           "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >           "date": "2022-05-20T18:50:00.000Z",
   >           "place": "수원종합운동장",
   >           "number_of_users": "6v6",
@@ -350,6 +351,7 @@ watch mode로 실행하기 전에,
   >       },
   >       {
   >           "id": 2,
+  >           "uuid": "4c97a3ef-51ce-4b9a-a4fa-1f6df5fda287",
   >           "date": "2022-05-20T20:30:00.000Z",
   >           "place": "아주대학교 운동장",
   >           "number_of_users": "5v5",
@@ -382,7 +384,7 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "url": "http://localhost:3000/games/${gameId}"
+  >       "url": "http://localhost:3000/games/${game-uuid}"
   >   }
   >   ```
   >
@@ -421,7 +423,7 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
-- GET /games/:id
+- GET /games/:uuid
 
   > 게임 방 입장(단순 입장, 참가 X)
   >
@@ -430,6 +432,7 @@ watch mode로 실행하기 전에,
   >   ```
   >   {
   >       "id": 1,
+  >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장2",
   >       "number_of_users": "6v6",
@@ -451,7 +454,7 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
-- PATCH /games/:id/:teamType
+- PATCH /games/:uuid/:teamType
 
   > id에 해당하는 게임 방에서 teamType(A or B)의 포메이션 설정
   > => 포메이션을 설정하면 그 팀의 주장으로 임명됨
@@ -469,6 +472,7 @@ watch mode로 실행하기 전에,
   >   ```
   >   {
   >       "id": 1,
+  >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장",
   >       "number_of_users": "6v6",
@@ -533,7 +537,7 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
-- PATCH /games/:id/:teamType/:position
+- PATCH /games/:uuid/:teamType/:position
 
   > id에 해당하는 게임 방에서 teamType(A or B)의 포메이션 내에서 원하는 position 선택
   >
@@ -542,6 +546,7 @@ watch mode로 실행하기 전에,
   >   ```
   >   {
   >       "id": 1,
+  >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >       "date": "2022-05-20T18:50:00.000Z",
   >       "place": "수원종합운동장",
   >       "number_of_users": "6v6",
@@ -606,7 +611,7 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
-- PATCH /games/:id/:teamType/captain
+- PATCH /games/:uuid/:teamType/captain
 
   > 주장을 다른 팀원에게 양도
   >
@@ -636,7 +641,7 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
-- DELETE /games/:id/:teamType
+- DELETE /games/:uuid/:teamType
 
   > 게임이 끝난 경우(방을 만들 때 정해진 게임 시간을 기준으로 게임이 끝난지를 판단)
   > => 주장이 게임 종료를 요청한 팀의 팀원들만 리뷰를 진행할 수 있음
@@ -655,6 +660,151 @@ watch mode로 실행하기 전에,
   >   {
   >       "statusCode": 403,
   >       "message": "The game is not over",
+  >       "error": "Forbidden"
+  >   }
+  >   ```
+
+**<참고> 현재 dev서버에서 테스트용으로 GK에 dummy data를 자동으로 생성함(src/games/games.service.ts/selectFormation#187) + 모든 포지션에 유저가 있지 않아도 게임 종료 및 리뷰가 가능함(prod에서는 변경 예정)**
+
+- GET /reviews
+
+  > 리뷰 리스트
+  > => 주장이 게임 종료를 요청한 팀의 팀원들만 리뷰리스트에 해당 리뷰가 나타남
+  >
+  > - status
+  >
+  >   - "리뷰 쓰기" : default
+  >   - "완료" : 종료시간으로부터 3일 후 게임에 참가한 인원 중 아무나 리뷰 리스트를 처음 요청한 순간 자동으로 바뀜 => Batch를 따로 만들지 않았기 때문에
+  >
+  > - 성공 시 response
+  >
+  >   ```
+  >   [
+  >       {
+  >           "id": 1,
+  >           "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
+  >           "date": "2022-06-05T19:22:01.000Z",
+  >           "place": "수원종합운동장",
+  >           "number_of_users": "6v6",
+  >           "gender": "성별 무관",
+  >           "host": "방 만든 사람",
+  >           "teamA": {
+  >               "FW1": 유저
+  >               "FW2": 유저,
+  >               "MF": 유저,
+  >               "DF1": 유저,
+  >               "DF2": 유저,
+  >               "GK": 유저
+  >               "CAPTAIN": 주장
+  >           },
+  >           "teamB": {
+  >               "FW1": 유저
+  >               "FW2": 유저,
+  >               "MF": 유저,
+  >               "DF1": 유저,
+  >               "DF2": 유저,
+  >               "GK": 유저
+  >               "CAPTAIN": 주장
+  >           },
+  >           "status": "리뷰 쓰기",
+  >           "teamA_status": "리뷰 쓰기",
+  >           "teamB_status": "리뷰 쓰기",
+  >           "apply_flag": false
+  >       }
+  >   ]
+  >   ```
+
+- GET /reviews/:uuid
+
+  > 리뷰 화면
+  > => 게임 상세 화면과 유사한 UI
+  >
+  > - 성공 시 response
+  >
+  >   ```
+  >   {
+  >       "id": 1,
+  >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
+  >       "date": "2022-06-05T19:22:01.000Z",
+  >       "place": "수원종합운동장",
+  >       "number_of_users": "6v6",
+  >       "gender": "성별 무관",
+  >       "host": "방 만든 사람",
+  >       "teamA": {
+  >           "FW1": 유저
+  >           "FW2": 유저,
+  >           "MF": 유저,
+  >           "DF1": 유저,
+  >           "DF2": 유저,
+  >           "GK": 유저
+  >           "CAPTAIN": 주장
+  >       },
+  >       "teamB": {
+  >           "FW1": 유저
+  >           "FW2": 유저,
+  >           "MF": 유저,
+  >           "DF1": 유저,
+  >           "DF2": 유저,
+  >           "GK": 유저
+  >           "CAPTAIN": 주장
+  >       },
+  >       "status": "리뷰 쓰기",
+  >       "teamA_status": "리뷰 쓰기",
+  >       "teamB_status": "리뷰 쓰기",
+  >       "apply_flag": false
+  >   }
+  >   ```
+  >
+  > - 실패 시 response
+  >
+  >   ```
+  >   - uuid에 해당하는 리뷰가 없는 경우
+  >   {
+  >       "statusCode": 404,
+  >       "message": "Review ${reviewId} is not exist",
+  >       "error": "Not Found"
+  >   }
+  >
+  >   - 아직 주장이 게임 종료를 요청하지 않은 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "Can't review games that haven't finished yet : ${review.uuid}",
+  >       "error": "Forbidden"
+  >   }
+  >   ```
+
+- PATCH /reviews/:uuid/:teamType/:position
+
+  > 해당 포지션의 유저를 리뷰
+  >
+  > - 실패 시 response
+  >
+  >   ```
+  >   - uuid에 해당하는 리뷰가 없는 경우
+  >   {
+  >       "statusCode": 404,
+  >       "message": "Review ${reviewId} is not exist",
+  >       "error": "Not Found"
+  >   }
+  >
+  >   - 게임 종료로부터 3일이 지난 게임을 리뷰하려고 하는 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "Reviews cannot be edited for games that have been 3 days since the game or have been blocked : ${review.uuid}",
+  >       "error": "Forbidden"
+  >   }
+  >
+  >   - 아직 주장이 게임 종료를 요청하지 않은 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "Can't review games that haven't finished yet : ${review.uuid}",
+  >       "error": "Forbidden"
+  >   }
+  >
+  >   - 자기 자신을 리뷰하려는 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "You can't rate yourself",
   >       "error": "Forbidden"
   >   }
   >   ```
