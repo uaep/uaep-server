@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -7,9 +8,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  FORMATIONS,
+  FORMATIONS_5v5,
+  FORMATIONS_6v6,
   GAME_STATUS,
   GENDER,
+  LEVEL,
+  LEVEL_LIMIT,
+  LEVEL_POINT,
+  PLAYER_NUMBERS,
+  PROVINCE,
+  REGION_FILTER,
   REVIEW_STATUS,
 } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -19,7 +27,7 @@ import { ReviewEntity } from '../reviews/entities/review.entity';
 import { GameEntity } from './entities/game.entity';
 import { convert, LocalDate, LocalDateTime } from '@js-joda/core';
 import { UserService } from 'src/users/users.service';
-import { FORMATIONS_DETAIL } from 'config/formations.config';
+import { FORMATIONS_DETAIL, LEVEL_DISTRIBUTION } from 'config/config';
 import { QueryFiltersDto } from './dto/query-filters.dto';
 
 @Injectable()
@@ -36,7 +44,70 @@ export class GamesService {
 
   async getAllGames(filters: QueryFiltersDto) {
     const conditions = {
-      where: {
+      where: [],
+    };
+    if (filters.region) {
+      const regions = [];
+      switch (filters.region) {
+        case REGION_FILTER.SEOUL:
+          regions.push(PROVINCE.SEOUL);
+          break;
+        case REGION_FILTER.GYEONGGI_GANGWON:
+          regions.push(PROVINCE.GYEONGGI);
+          regions.push(PROVINCE.GANGWON);
+          break;
+        case REGION_FILTER.INCHEON:
+          regions.push(PROVINCE.INCHEON);
+          break;
+        case REGION_FILTER.DAEJEON_SEJONG_CHUNGCHEONG:
+          regions.push(PROVINCE.DAEJEON);
+          regions.push(PROVINCE.SEJONG);
+          regions.push(PROVINCE.CHUNGCHEONGBUK);
+          regions.push(PROVINCE.CHUNGCHEONGNAM);
+          break;
+        case REGION_FILTER.DAEGU_GYEONGSANGBUK:
+          regions.push(PROVINCE.DAEGU);
+          regions.push(PROVINCE.GYEONGSANGBUK);
+          break;
+        case REGION_FILTER.BUSAN_ULSAN_GYEONGSANGNAM:
+          regions.push(PROVINCE.BUSAN);
+          regions.push(PROVINCE.ULSAN);
+          regions.push(PROVINCE.GYEONGSANGNAM);
+          break;
+        case REGION_FILTER.GWANGJU_JEOLLA:
+          regions.push(PROVINCE.GWANGJU);
+          regions.push(PROVINCE.JEOLLABUK);
+          regions.push(PROVINCE.JEOLLANAM);
+          break;
+        case REGION_FILTER.JEJU:
+          regions.push(PROVINCE.JEJU);
+          break;
+      }
+      regions.forEach((currentElement, index) => {
+        conditions.where[index] = {
+          date: Between(
+            convert(
+              LocalDate.of(
+                LocalDate.now()['_year'],
+                filters.month,
+                filters.day,
+              ),
+            ).toDate(),
+            convert(
+              LocalDate.of(
+                LocalDate.now()['_year'],
+                filters.month,
+                filters.day + 1,
+              ),
+            ).toDate(),
+          ),
+        };
+        Object.assign(conditions.where[index], {
+          province: currentElement,
+        });
+      });
+    } else {
+      conditions.where[0] = {
         date: Between(
           convert(
             LocalDate.of(LocalDate.now()['_year'], filters.month, filters.day),
@@ -49,19 +120,34 @@ export class GamesService {
             ),
           ).toDate(),
         ),
-      },
-    };
+      };
+    }
+
     if (filters.gender) {
-      Object.assign(conditions.where, { gender: filters.gender });
-    }
-    if (filters.status) {
-      Object.assign(conditions.where, { status: filters.status });
-    }
-    if (filters.number_of_users) {
-      Object.assign(conditions.where, {
-        number_of_users: filters.number_of_users,
+      conditions.where.forEach((currentElement, index) => {
+        Object.assign(conditions.where[index], { gender: filters.gender });
       });
     }
+    if (filters.status) {
+      conditions.where.forEach((currentElement, index) => {
+        Object.assign(conditions.where[index], { status: filters.status });
+      });
+    }
+    if (filters.number_of_users) {
+      conditions.where.forEach((currentElement, index) => {
+        Object.assign(conditions.where[index], {
+          number_of_users: filters.number_of_users,
+        });
+      });
+    }
+    if (filters.level_limit) {
+      conditions.where.forEach((currentElement, index) => {
+        Object.assign(conditions.where[index], {
+          level_limit: filters.level_limit,
+        });
+      });
+    }
+
     Object.assign(conditions, {
       order: {
         date: 'ASC',
@@ -70,7 +156,17 @@ export class GamesService {
     const games = await this.gameRepository.find(conditions);
     const gameLists = [];
     games.forEach((game) => {
-      const { id, teamA, teamB, ...gameInfo } = game;
+      const {
+        id,
+        host,
+        teamA,
+        teamB,
+        users,
+        number_of_seats,
+        review_flag,
+        level_distribution,
+        ...gameInfo
+      } = game;
       gameLists.push(gameInfo);
     });
     return gameLists;
@@ -86,8 +182,23 @@ export class GamesService {
     }
     if (game.gender !== GENDER.ANY && game.gender !== currentUser.gender) {
       throw new ForbiddenException(
-        `You can't enter the game : only for ${game.gender}`,
+        `You can't enter this game : only for ${game.gender}`,
       );
+    }
+    if (game.level_limit) {
+      if (game.level_limit === LEVEL_LIMIT.BELOW_B3) {
+        if (currentUser.level_point >= LEVEL_POINT[LEVEL.A1]) {
+          throw new ForbiddenException(
+            `You can't enter this game - Level limit ${LEVEL_LIMIT.BELOW_B3}`,
+          );
+        }
+      } else if (game.level_limit === LEVEL_LIMIT.HIGHER_SP1) {
+        if (currentUser.level_point < LEVEL_POINT[LEVEL.SP1]) {
+          throw new ForbiddenException(
+            `You can't enter this game - Level limit ${LEVEL_LIMIT.HIGHER_SP1}`,
+          );
+        }
+      }
     }
     return game;
   }
@@ -99,6 +210,9 @@ export class GamesService {
         `You can't create a game for ${game.gender}`,
       );
     }
+    const numberOfUsers = game.number_of_users.split('v');
+    const numberOfSeats = Number(numberOfUsers[0]) + Number(numberOfUsers[1]);
+
     const newGame = this.gameRepository.create({
       host: host.name,
       date: convert(
@@ -111,10 +225,50 @@ export class GamesService {
           1,
         ),
       ).toDate(),
+      province: host.province,
+      town: host.town,
       place: game.place,
       number_of_users: game.number_of_users,
+      number_of_seats: numberOfSeats,
       gender: game.gender,
     });
+    if (game.number_of_users === PLAYER_NUMBERS.v5) {
+      if (host.level_point < LEVEL_POINT[LEVEL.SP1]) {
+        throw new ForbiddenException(
+          `5vs5 game can only be created by users with ${LEVEL.SP1} level or higher.`,
+        );
+      }
+      if (game.level_limit !== LEVEL_LIMIT.HIGHER_SP1) {
+        throw new BadRequestException(
+          `When you chooses 5vs5 game, level_limit must be ${LEVEL_LIMIT.HIGHER_SP1}.`,
+        );
+      }
+      newGame.level_limit = game.level_limit;
+      newGame.level_distribution = LEVEL_DISTRIBUTION[LEVEL_LIMIT.HIGHER_SP1];
+    } else {
+      if (game.level_limit && game.level_limit !== LEVEL_LIMIT.ALL) {
+        if (game.level_limit === LEVEL_LIMIT.BELOW_B3) {
+          if (host.level_point >= LEVEL_POINT[LEVEL.A1]) {
+            throw new ForbiddenException(
+              `You can't create this game - Level limit ${LEVEL_LIMIT.BELOW_B3}`,
+            );
+          }
+          newGame.level_distribution = LEVEL_DISTRIBUTION[LEVEL_LIMIT.BELOW_B3];
+        } else if (game.level_limit === LEVEL_LIMIT.HIGHER_SP1) {
+          if (host.level_point < LEVEL_POINT[LEVEL.SP1]) {
+            throw new ForbiddenException(
+              `You can't create this game - Level limit ${LEVEL_LIMIT.HIGHER_SP1}`,
+            );
+          }
+          newGame.level_distribution =
+            LEVEL_DISTRIBUTION[LEVEL_LIMIT.HIGHER_SP1];
+        }
+        newGame.level_limit = game.level_limit;
+      } else {
+        newGame.level_distribution = LEVEL_DISTRIBUTION[LEVEL_LIMIT.ALL];
+      }
+    }
+
     return await this.gameRepository.save(newGame);
   }
 
@@ -124,6 +278,9 @@ export class GamesService {
     teamType: string,
     formation: string,
   ) {
+    if (teamType !== 'A' && teamType !== 'B') {
+      throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
+    }
     const opponentType = teamType === 'A' ? 'B' : 'A';
     const game = await this.gameRepository.findOne({ uuid: gameId });
     if (!game) {
@@ -170,19 +327,50 @@ export class GamesService {
       }
     }
 
-    switch (FORMATIONS[formation]) {
-      case FORMATIONS.F131:
-        game[`team${teamType}`] = FORMATIONS_DETAIL[FORMATIONS.F131];
-        break;
-      case FORMATIONS.F212:
-        game[`team${teamType}`] = FORMATIONS_DETAIL[FORMATIONS.F212];
-        break;
-      case FORMATIONS.F221:
-        game[`team${teamType}`] = FORMATIONS_DETAIL[FORMATIONS.F221];
-        break;
-      default:
-        throw new NotFoundException(`${formation} is an unsupported formation`);
+    if (game.number_of_users === PLAYER_NUMBERS.v6) {
+      switch (FORMATIONS_6v6[formation]) {
+        case FORMATIONS_6v6.F131:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v6][FORMATIONS_6v6.F131];
+          break;
+        case FORMATIONS_6v6.F212:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v6][FORMATIONS_6v6.F212];
+          break;
+        case FORMATIONS_6v6.F221:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v6][FORMATIONS_6v6.F221];
+          break;
+        default:
+          throw new NotFoundException(
+            `${formation} is an unsupported formation`,
+          );
+      }
+    } else if (game.number_of_users === PLAYER_NUMBERS.v5) {
+      switch (FORMATIONS_5v5[formation]) {
+        case FORMATIONS_5v5.F202:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v5][FORMATIONS_5v5.F202];
+          break;
+        case FORMATIONS_5v5.F211:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v5][FORMATIONS_5v5.F211];
+          break;
+        case FORMATIONS_5v5.F121:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v5][FORMATIONS_5v5.F121];
+          break;
+        case FORMATIONS_5v5.F112:
+          game[`team${teamType}`] =
+            FORMATIONS_DETAIL[PLAYER_NUMBERS.v5][FORMATIONS_5v5.F112];
+          break;
+        default:
+          throw new NotFoundException(
+            `${formation} is an unsupported formation`,
+          );
+      }
     }
+
     // TODO : test용 GK 생성 -> 삭제해야함
     game[`team${teamType}`]['GK'] = {
       uuid: 'test',
@@ -193,6 +381,8 @@ export class GamesService {
       position: 'GK',
       level_point: 0,
     };
+    game.number_of_seats -= 1;
+
     game[`team${teamType}`]['CAPTAIN'] = await this.userService.getProfile(
       user.email,
     );
@@ -205,6 +395,9 @@ export class GamesService {
     teamType: string,
     newCaptainName: string,
   ) {
+    if (teamType !== 'A' && teamType !== 'B') {
+      throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
+    }
     const game = await this.gameRepository.findOne({ uuid: gameId });
     if (!game) {
       throw new NotFoundException(`Game ${gameId} is not exist`);
@@ -240,6 +433,9 @@ export class GamesService {
     teamType: string,
     position: string,
   ) {
+    if (teamType !== 'A' && teamType !== 'B') {
+      throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
+    }
     const game = await this.gameRepository.findOne(
       { uuid: gameId },
       { relations: ['users'] },
@@ -247,8 +443,6 @@ export class GamesService {
     if (!game) {
       throw new NotFoundException(`Game ${gameId} is not exist`);
     }
-    const numberOfUsers = game.number_of_users.split('v');
-    let numberOfSeats = Number(numberOfUsers[0]) + Number(numberOfUsers[1]);
 
     if (game[`team${teamType}`] === null) {
       throw new NotFoundException(`team${teamType} doesn't have formation yet`);
@@ -258,21 +452,56 @@ export class GamesService {
       throw new NotFoundException(`Invalid Position : ${position}`);
     }
 
-    if (game[`team${teamType}`][position] !== null) {
-      if (game[`team${teamType}`][position].email !== user.email) {
-        return game[`team${teamType}`][position];
-      } else {
-        game[`team${teamType}`][position] = null;
-        game.users = game.users.filter((gamer) => {
-          return gamer.email !== user.email;
-        });
-        return await this.gameRepository.save(game);
-      }
-    }
-
     const currentUser = await this.userRepository.findOne({
       email: user.email,
     });
+
+    if (game[`team${teamType}`][position] !== null) {
+      if (game[`team${teamType}`][position].email !== user.email) {
+        return await this.userService.getProfile(
+          game[`team${teamType}`][position].email,
+        );
+      } else {
+        game[`team${teamType}`][position] = null;
+        switch (game.level_limit) {
+          case LEVEL_LIMIT.ALL:
+            for (const [key, value] of Object.entries(
+              game.level_distribution,
+            )) {
+              if (key === currentUser.level.slice(0, -1)) {
+                game.level_distribution[key] =
+                  (value * game.users.length - 1) / (game.users.length - 1);
+              } else {
+                game.level_distribution[key] =
+                  (value * game.users.length) / (game.users.length - 1);
+              }
+            }
+            break;
+          case LEVEL_LIMIT.BELOW_B3:
+          case LEVEL_LIMIT.HIGHER_SP1:
+            for (const [key, value] of Object.entries(
+              game.level_distribution,
+            )) {
+              if (key === currentUser.level) {
+                game.level_distribution[key] =
+                  (value * game.users.length - 1) / (game.users.length - 1);
+              } else {
+                game.level_distribution[key] =
+                  (value * game.users.length) / (game.users.length - 1);
+              }
+            }
+            break;
+        }
+        game.users = game.users.filter((gamer) => {
+          return gamer.email !== user.email;
+        });
+        game.number_of_seats += 1;
+        if (game.status === GAME_STATUS.CLOSED) {
+          game.status = GAME_STATUS.AVAILABLE;
+        }
+        return await this.gameRepository.save(game);
+      }
+    }
 
     if (position.replace(/[0-9]/g, '') !== currentUser.position) {
       throw new ForbiddenException(
@@ -284,9 +513,6 @@ export class GamesService {
 
     if (game['teamA']) {
       for (const [key, value] of Object.entries(game['teamA'])) {
-        if (key !== 'CAPTAIN' && value !== null) {
-          numberOfSeats -= 1;
-        }
         if (key.replace(/[0-9]/g, '') === currentUser.position) {
           if (value === null) {
             continue;
@@ -299,9 +525,6 @@ export class GamesService {
     }
     if (game['teamB']) {
       for (const [key, value] of Object.entries(game['teamB'])) {
-        if (key !== 'CAPTAIN' && value !== null) {
-          numberOfSeats -= 1;
-        }
         if (key.replace(/[0-9]/g, '') === currentUser.position) {
           if (value === null) {
             continue;
@@ -317,15 +540,44 @@ export class GamesService {
       currentUser.email,
     );
     if (!game.users.includes(currentUser)) {
+      switch (game.level_limit) {
+        case LEVEL_LIMIT.ALL:
+          for (const [key, value] of Object.entries(game.level_distribution)) {
+            if (key === currentUser.level.slice(0, -1)) {
+              game.level_distribution[key] =
+                (value * game.users.length + 1) / (game.users.length + 1);
+            } else {
+              game.level_distribution[key] =
+                (value * game.users.length) / (game.users.length + 1);
+            }
+          }
+          break;
+        case LEVEL_LIMIT.BELOW_B3:
+        case LEVEL_LIMIT.HIGHER_SP1:
+          for (const [key, value] of Object.entries(game.level_distribution)) {
+            if (key === currentUser.level) {
+              game.level_distribution[key] =
+                (value * game.users.length + 1) / (game.users.length + 1);
+            } else {
+              game.level_distribution[key] =
+                (value * game.users.length) / (game.users.length + 1);
+            }
+          }
+          break;
+      }
       game.users.push(currentUser);
+      game.number_of_seats -= 1;
     }
-    if (numberOfSeats === 0) {
+    if (game.number_of_seats === 0) {
       game.status = GAME_STATUS.CLOSED;
     }
     return await this.gameRepository.save(game);
   }
 
   async finishGame(user, gameId: string, teamType: string) {
+    if (teamType !== 'A' && teamType !== 'B') {
+      throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
+    }
     const opponentType = teamType === 'A' ? 'B' : 'A';
     const game = await this.gameRepository.findOne(
       { uuid: gameId },
@@ -407,4 +659,8 @@ export class GamesService {
       await this.gameRepository.remove(game);
     }
   }
+
+  // async recommendGames(user) {
+  //   return true;
+  // }
 }

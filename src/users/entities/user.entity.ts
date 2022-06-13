@@ -11,7 +11,13 @@ import {
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { IsEmail, IsEnum } from 'class-validator';
-import { GENDER, POSITION } from 'config/constants';
+import {
+  GENDER,
+  LEVEL,
+  LEVEL_POINT,
+  POSITION,
+  PROVINCE,
+} from 'config/constants';
 import { InternalServerErrorException } from '@nestjs/common';
 import { Exclude } from 'class-transformer';
 import { ReviewEntity } from 'src/reviews/entities/review.entity';
@@ -40,15 +46,27 @@ export class UserEntity {
   @IsEnum(GENDER)
   gender: GENDER;
 
+  @Column({ type: 'enum', enum: PROVINCE })
+  @IsEnum(PROVINCE)
+  province: PROVINCE;
+
+  // @Column({ type: 'enum', enum: TOWN })
+  // @IsEnum(TOWN)
+  // town: TOWN;
+
   @Column()
-  address: string;
+  town: string;
 
   @Column({ type: 'enum', enum: POSITION })
   @IsEnum(POSITION)
   position: POSITION;
 
-  @Column({ type: 'float', default: 0.0 })
+  @Column({ type: 'float' })
   level_point: number;
+
+  @Column({ type: 'enum', enum: LEVEL })
+  @IsEnum(LEVEL)
+  level: LEVEL;
 
   @Column({ default: 0 })
   position_change_point: number;
@@ -77,6 +95,57 @@ export class UserEntity {
       this.password = await bcrypt.hash(this.password, 10);
     } catch (e) {
       throw new InternalServerErrorException();
+    }
+  }
+
+  updateLevel() {
+    switch (true) {
+      case this.level_point >= LEVEL_POINT[LEVEL.S1] &&
+        this.level_point < LEVEL_POINT[LEVEL.S2]:
+        this.level = LEVEL.S1;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.S3]:
+        this.level = LEVEL.S2;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.B1]:
+        this.level = LEVEL.S3;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.B2]:
+        this.level = LEVEL.B1;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.B3]:
+        this.level = LEVEL.B2;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.A1]:
+        this.level = LEVEL.B3;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.A2]:
+        this.level = LEVEL.A1;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.A3]:
+        this.level = LEVEL.A2;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.SP1]:
+        this.level = LEVEL.A3;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.SP2]:
+        this.level = LEVEL.SP1;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.SP3]:
+        this.level = LEVEL.SP2;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.P1]:
+        this.level = LEVEL.SP3;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.P2]:
+        this.level = LEVEL.P1;
+        break;
+      case this.level_point < LEVEL_POINT[LEVEL.P3]:
+        this.level = LEVEL.P2;
+        break;
+      case this.level_point >= LEVEL_POINT[LEVEL.P3]:
+        this.level = LEVEL.P3;
+        break;
     }
   }
 

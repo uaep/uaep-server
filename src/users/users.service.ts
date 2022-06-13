@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DOMAIN } from 'config/constants';
+import { DOMAIN, LEVEL, LEVEL_POINT } from 'config/constants';
 import { EmailService } from 'src/email/email.service';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,6 +14,7 @@ import { UserEntity } from './entities/user.entity';
 import { VerificationEntity } from '../email/entities/verification.entity';
 import * as uuid from 'uuid';
 import { EditUserDto } from './dto/edit-user.dto';
+import { TOWN_ALL } from 'config/config';
 
 @Injectable()
 export class UserService {
@@ -28,7 +29,31 @@ export class UserService {
 
   async testCreateUser(users) {
     users.forEach(async (user) => {
-      const newUser = this.userRepository.create(user);
+      user.level = user.level + '1';
+      let level_point;
+      switch (user.level) {
+        case LEVEL.S1:
+          level_point = LEVEL_POINT[LEVEL.S1];
+          break;
+        case LEVEL.B1:
+          level_point = LEVEL_POINT[LEVEL.B1];
+          break;
+        case LEVEL.A1:
+          level_point = LEVEL_POINT[LEVEL.A1];
+          break;
+        case LEVEL.SP1:
+          level_point = LEVEL_POINT[LEVEL.SP1];
+          break;
+        case LEVEL.P1:
+          level_point = LEVEL_POINT[LEVEL.P1];
+          break;
+        default:
+          throw new BadRequestException(`${user.level} is not exist`);
+      }
+      const newUser = this.userRepository.create({
+        level_point: level_point,
+        ...user,
+      });
       await this.userRepository.save(newUser);
     });
   }
@@ -43,8 +68,42 @@ export class UserService {
     const verification = await this.verificationRepository.findOne({
       signupVerifyToken,
     });
+    let level_point;
+    switch (user.level) {
+      case LEVEL.S1:
+        level_point = LEVEL_POINT[LEVEL.S1];
+        break;
+      case LEVEL.B1:
+        level_point = LEVEL_POINT[LEVEL.B1];
+        break;
+      case LEVEL.A1:
+        level_point = LEVEL_POINT[LEVEL.A1];
+        break;
+      case LEVEL.SP1:
+        level_point = LEVEL_POINT[LEVEL.SP1];
+        break;
+      case LEVEL.P1:
+        level_point = LEVEL_POINT[LEVEL.P1];
+        break;
+      default:
+        throw new BadRequestException(`${user.level} is not exist`);
+    }
+
+    let town_flag = false;
+    for (const value of Object.values(TOWN_ALL[user.province])) {
+      if (value === user.town) {
+        town_flag = true;
+        break;
+      }
+    }
+    if (!town_flag) {
+      throw new BadRequestException(
+        `The address ${user.province} ${user.town} is invalid format`,
+      );
+    }
     const newUser = this.userRepository.create({
       email: verification.email,
+      level_point: level_point,
       ...user,
     });
     await this.userRepository.save(newUser);
@@ -93,9 +152,11 @@ export class UserService {
       const {
         id,
         password,
+        level_point,
         createdAt,
         updatedAt,
         currentHashedRefreshToken,
+        reviews,
         ...profile
       } = user;
       return profile;
@@ -103,24 +164,46 @@ export class UserService {
       const {
         id,
         password,
+        level_point,
         createdAt,
         updatedAt,
         currentHashedRefreshToken,
         position_change_point,
         games,
+        reviews,
         ...profile
       } = user;
       return profile;
     }
   }
 
-  async editProfile(email: string, user: EditUserDto) {
+  async editProfile(email: string, newUserInfo: EditUserDto) {
     const userProfile = await this.userRepository.findOne(
       { email },
       { relations: ['games'] },
     );
 
-    if (user.position !== userProfile.position) {
+    if (newUserInfo.province) {
+      if (!newUserInfo.town) {
+        throw new BadRequestException(`No detailed region selected.`);
+      }
+      let town_flag = false;
+      for (const value of Object.values(TOWN_ALL[newUserInfo.province])) {
+        if (value === newUserInfo.town) {
+          town_flag = true;
+          break;
+        }
+      }
+      if (!town_flag) {
+        throw new BadRequestException(
+          `The address ${newUserInfo.province} ${newUserInfo.town} is invalid format.`,
+        );
+      }
+      userProfile.province = newUserInfo.province;
+      userProfile.town = newUserInfo.town;
+    }
+
+    if (newUserInfo.position !== userProfile.position) {
       if (userProfile.games.length !== 0) {
         throw new MethodNotAllowedException(
           'Precondition : Deselect positions in all participating games',
@@ -137,29 +220,20 @@ export class UserService {
       userProfile.position_change_point -= this.config.get(
         'POSITION_CHANGE_POINT',
       );
-      userProfile.position = user.position;
+      userProfile.position = newUserInfo.position;
     }
 
-    if (user.name && user.name !== userProfile.name) {
+    if (newUserInfo.name && newUserInfo.name !== userProfile.name) {
       const existedName = await this.userRepository.findOne({
-        name: user.name,
+        name: newUserInfo.name,
       });
       if (existedName) {
         throw new UnprocessableEntityException('This name is already taken.');
       }
     }
 
-    userProfile.name = user.name ? user.name : userProfile.name;
-    userProfile.address = user.address ? user.address : userProfile.address;
+    userProfile.name = newUserInfo.name ? newUserInfo.name : userProfile.name;
     await this.userRepository.save(userProfile);
     return await this.getProfile(email, email);
   }
-
-  // async getAllReviews(email: string) {
-  //   const user = await this.userRepository.findOne(
-  //     { email },
-  //     { relations: ['reviews'] },
-  //   );
-  //   return user.reviews;
-  // }
 }

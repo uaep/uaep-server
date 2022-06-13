@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { ReviewDto } from './dto/review.dto';
 import { ReviewEntity } from './entities/review.entity';
 import { ReviewsService } from './reviews.service';
 
@@ -32,14 +33,14 @@ export class ReviewsController {
     @Param('reviewId') reviewId: string,
     @Param('teamType') teamType: string,
     @Param('position') position: string,
-    @Body() { rate },
+    @Body() review: ReviewDto,
   ) {
     return await this.reviewService.review(
       req.user,
       reviewId,
       teamType,
       position,
-      rate,
+      review,
     );
   }
 }

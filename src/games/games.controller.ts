@@ -36,6 +36,11 @@ export class GamesController {
     return { url: `${this.config.get('BASE_URL')}/games/${createdGame.uuid}` };
   }
 
+  // @Get('/recommend')
+  // async recommendGames(@Req() req) {
+  //   return await this.gameService.recommendGames(req.user);
+  // }
+
   @Get('/:id')
   async getGame(@Req() req, @Param('id') id: string): Promise<GameEntity> {
     return await this.gameService.getGame(req.user, id);
@@ -48,7 +53,12 @@ export class GamesController {
     @Param('teamType') teamType: string,
     @Body() { name },
   ) {
-    await this.gameService.captainAppointment(req.user, id, teamType, name);
+    await this.gameService.captainAppointment(
+      req.user,
+      id,
+      teamType,
+      name.trim(),
+    );
   }
 
   @Patch('/:id/:teamType/:position')
@@ -77,7 +87,7 @@ export class GamesController {
       req.user,
       id,
       teamType,
-      formation,
+      formation.trim(),
     );
   }
 

@@ -27,6 +27,7 @@ export class UserController {
     private readonly config: ConfigService,
   ) {}
 
+  // TODO : 삭제
   @Post('/test')
   async testCreate(@Body() { users }) {
     await this.userService.testCreateUser(users);
@@ -35,7 +36,9 @@ export class UserController {
 
   @Post('/email_validity_checks')
   async emailValidityCheck(@Body() { email }) {
-    const signupVerifyToken = await this.userService.emailValidityCheck(email);
+    const signupVerifyToken = await this.userService.emailValidityCheck(
+      email.trim(),
+    );
     return {
       url: `${this.config.get(
         'BASE_URL',
@@ -48,7 +51,7 @@ export class UserController {
     @Query('signupVerifyToken') signupVerifyToken,
     @Body() { code },
   ) {
-    await this.userService.emailVerify(signupVerifyToken, code);
+    await this.userService.emailVerify(signupVerifyToken, code.trim());
     return {
       url: `${this.config.get(
         'BASE_URL',

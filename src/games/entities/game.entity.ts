@@ -1,5 +1,5 @@
 import { IsEnum } from 'class-validator';
-import { GAME_STATUS, GENDER } from 'config/constants';
+import { GAME_STATUS, GENDER, LEVEL_LIMIT, PROVINCE } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import {
   Column,
@@ -21,11 +21,21 @@ export class GameEntity {
   @Column()
   date: Date;
 
+  @Column({ type: 'enum', enum: PROVINCE })
+  @IsEnum(PROVINCE)
+  province: PROVINCE;
+
+  @Column()
+  town: string;
+
   @Column()
   place: string;
 
   @Column()
   number_of_users: string;
+
+  @Column()
+  number_of_seats: number;
 
   @Column({ type: 'enum', enum: GENDER })
   @IsEnum(GENDER)
@@ -49,4 +59,11 @@ export class GameEntity {
 
   @Column({ default: false })
   review_flag: boolean;
+
+  @Column({ type: 'enum', enum: LEVEL_LIMIT, default: LEVEL_LIMIT.ALL })
+  @IsEnum(LEVEL_LIMIT)
+  level_limit?: LEVEL_LIMIT;
+
+  @Column({ type: 'json', nullable: true })
+  level_distribution?: object;
 }

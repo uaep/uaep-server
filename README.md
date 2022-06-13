@@ -12,9 +12,9 @@ The Backend of <span style="color:orange">**UAEP**</span>
 - <span style="color:gray">~~JWT : Access token, Refresh token 인증을 통한 로그인~~</span>
 - <span style="color:gray">~~프로필 수정~~</span>
 - <span style="color:gray">~~방 생성 및 접속~~</span>
-- 방 리스트 필터링 <span style="color:orange">-> 진행 중</span>
-- 실시간 채팅(미확정)
-- 매 경기마다 진행되는 상대방 평가 및 레벨링 시스템
+- <span style="color:gray">~~방 리스트 필터링~~</span>
+- <span style="color:gray">~~매 경기마다 진행되는 상대방 평가 및 레벨링 시스템~~</span>
+- 게임 추천(자동매칭) <span style="color:orange">-> 진행 중</span>
 
 <!-- [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository. -->
 
@@ -136,6 +136,21 @@ watch mode로 실행하기 전에,
 
   > 회원가입(이메일을 제외한 나머지 정보)
   >
+  > - Request body
+  >
+  >   ```
+  >   {
+  >       "name":"example",
+  >       "password": "example_password",
+  >       "password_check": "example_password",
+  >       "gender": "male",
+  >       "province":"경기도",
+  >       "town":"수원시",
+  >       "position": "FW",
+  >       "level": "아마추어"
+  >   }
+  >   ```
+  >
   > - 실패 시 response
   >
   >   ```
@@ -152,6 +167,20 @@ watch mode로 실행하기 전에,
   >   {
   >       "statusCode": 400,
   >       "message": "Password confirmation does not match",
+  >       "error": "Bad Request"
+  >   }
+  >
+  >   - 유효하지 않은 레벨을 요청한 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "${level} is not exist",
+  >       "error": "Bad Request"
+  >   }
+  >
+  >   - province에 해당하지 않는 town을 선택한 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "The address ${province} ${town} is invalid format.",
   >       "error": "Bad Request"
   >   }
   >   ```
@@ -267,10 +296,11 @@ watch mode로 실행하기 전에,
   > - Request body
   >
   >   ```
-  >   name, address, position은 전부 optional
+  >   name, province, town, position은 전부 optional
   >   {
   >       "name" : "new-name",
-  >       "address" : "new-address",
+  >       "province" : "new-province",
+  >       "town" : "new-town",
   >       "position" : "new-position"
   >   }
   >   ```
@@ -282,7 +312,8 @@ watch mode로 실행하기 전에,
   >       "email": "example@email.com",
   >       "name": "Name",
   >       "gender": "남성",
-  >       "address": "address",
+  >       "province" : "new-province",
+  >       "town" : "new-town",
   >       "position": "FW",
   >       "level_point": 0,
   >       "position_change_point": 30,
@@ -313,6 +344,20 @@ watch mode로 실행하기 전에,
   >       "message": "Not enough points : 0",
   >       "error": "Bad Request"
   >   }
+  >
+  >   - province만 선택하고 town은 선택하지 않은 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "No detailed region selected.",
+  >       "error": "Bad Request"
+  >   }
+  >
+  >   - province에 해당하지 않는 town을 선택한 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "The address ${province} ${town} is invalid format.",
+  >       "error": "Bad Request"
+  >   }
   >   ```
 
 - GET /games
@@ -333,8 +378,10 @@ watch mode로 실행하기 전에,
   >     - 참가 가능, 마감
   >   - number_of_users
   >     - 6v6, 5v5
+  >   - region
+  >     - 서울, 경기/강원, 인천, 대전/세종/충청, 대구/경북, 부산/울산/경남, 광주/전라, 제주
   >
-  > - ex) /games?month=6&day=3&gender=남성&status=참가 가능&number_of_users=6v6
+  > - ex) /games?month=6&day=3&gender=남성&status=참가 가능&number_of_users=6v6&region=경기/강원
   >
   > - 성공 시 response
   >
@@ -344,6 +391,8 @@ watch mode로 실행하기 전에,
   >           "id": 1,
   >           "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >           "date": "2022-05-20T18:50:00.000Z",
+  >           "province": "경기도",
+  >           "town": "수원시",
   >           "place": "수원종합운동장",
   >           "number_of_users": "6v6",
   >           "gender": "남성",
@@ -353,6 +402,8 @@ watch mode로 실행하기 전에,
   >           "id": 2,
   >           "uuid": "4c97a3ef-51ce-4b9a-a4fa-1f6df5fda287",
   >           "date": "2022-05-20T20:30:00.000Z",
+  >           "province": "경기도",
+  >           "town": "수원시",
   >           "place": "아주대학교 운동장",
   >           "number_of_users": "5v5",
   >           "gender": "성별 무관",
@@ -421,6 +472,20 @@ watch mode로 실행하기 전에,
   >       "message": "You can't create a game for ${game.gender}",
   >       "error": "Forbidden"
   >   }
+  >
+  >   - 레벨이 세미프로 미만인데 5v5 게임을 만드려는 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "5vs5 game can only be created by users with ${LEVEL.SP1} level or higher.",
+  >       "error": "Forbidden"
+  >   }
+  >
+  >   - 5v5 게임을 선택했는데, level_limit을 '세미프로1 이상'을 선택하지 않은 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "When you chooses 5vs5 game, level_limit must be ${LEVEL_LIMIT.HIGHER_SP1}.",
+  >       "error": "Bad Request"
+  >   }
   >   ```
 
 - GET /games/:uuid
@@ -434,12 +499,23 @@ watch mode로 실행하기 전에,
   >       "id": 1,
   >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
   >       "date": "2022-05-20T18:50:00.000Z",
+  >       "province": "경기도",
+  >       "town": "수원시",
   >       "place": "수원종합운동장2",
   >       "number_of_users": "6v6",
   >       "gender": "남성",
   >       "host": "방 만든 사람",
   >       "teamA": null,
-  >       "teamB": null
+  >       "teamB": null,
+  >       "status": "참가 가능",
+  >       "level_limit": "모든 레벨",
+  >       "level_distribution": {
+  >           "스타터": 0.1666667,
+  >           "비기너": 0.3333333,
+  >           "아마추어": 0.5,
+  >           "세미프로": 0,
+  >           "프로": 0
+  >       },
   >   }
   >   ```
   >
@@ -449,7 +525,14 @@ watch mode로 실행하기 전에,
   >   - 본인이 해당하지 않는 성별 전용 방에 입장하려는 경우
   >   {
   >       "statusCode": 403,
-  >       "message": "You can't enter the game : only for ${game.gender}",
+  >       "message": "You can't enter this game : only for ${game.gender}",
+  >       "error": "Forbidden"
+  >   }
+  >
+  >   - 본인의 레벨에 해당하지 않는 방을 들어가는 경우
+  >   {
+  >       "statusCode": 403,
+  >       "message": "You can't enter this game - Level limit ${LEVEL_LIMIT.BELOW_B3}",
   >       "error": "Forbidden"
   >   }
   >   ```
@@ -463,7 +546,7 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "formation": "F212" | "F221" | "F131"
+  >       "formation": "F212" | "F221" | "F131" | "F202" | "F211" | "F121" | "F112"
   >   }
   >   ```
   >
@@ -494,13 +577,29 @@ watch mode로 실행하기 전에,
   >               "level_point": 0
   >           }
   >       },
-  >       "teamB": null
+  >       "teamB": null,
+  >       "status": "참가 가능",
+  >       "level_limit": "모든 레벨",
+  >       "level_distribution": {
+  >           "스타터": 0.1666667,
+  >           "비기너": 0.3333333,
+  >           "아마추어": 0.5,
+  >           "세미프로": 0,
+  >           "프로": 0
+  >       },
   >   }
   >   ```
   >
   > - 실패 시 response
   >
   >   ```
+  >   - teamType가 'A' 또는 'B'가 아닌 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "TeamType is invalid format : ${teamType}",
+  >       "error": "Bad Request"
+  >   }
+  >
   >   - A팀의 주장이 B팀의 포메이션을 변경하려고 하는 경우
   >   {
   >       "statusCode": 405,
@@ -575,13 +674,29 @@ watch mode로 실행하기 전에,
   >               "level_point": 0
   >           }
   >       },
-  >       "teamB": null
+  >       "teamB": null,
+  >       "status": "참가 가능",
+  >       "level_limit": "모든 레벨",
+  >       "level_distribution": {
+  >           "스타터": 0.1666667,
+  >           "비기너": 0.3333333,
+  >           "아마추어": 0.5,
+  >           "세미프로": 0,
+  >           "프로": 0
+  >       },
   >   }
   >   ```
   >
   > - 실패 시 response
   >
   >   ```
+  >   - teamType가 'A' 또는 'B'가 아닌 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "TeamType is invalid format : ${teamType}",
+  >       "error": "Bad Request"
+  >   }
+  >
   >   - 아직 포메이션이 지정되지 않은 팀의 포지션을 요청한 경우
   >   {
   >       "statusCode": 404,
@@ -626,6 +741,13 @@ watch mode로 실행하기 전에,
   > - 실패 시 response
   >
   >   ```
+  >   - teamType가 'A' 또는 'B'가 아닌 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "TeamType is invalid format : ${teamType}",
+  >       "error": "Bad Request"
+  >   }
+  >
   >   - 자신이 팀의 주장이 아닐 경우
   >   {
   >       "statusCode": 403,
@@ -649,6 +771,13 @@ watch mode로 실행하기 전에,
   > - 실패 시 response
   >
   >   ```
+  >   - teamType가 'A' 또는 'B'가 아닌 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "TeamType is invalid format : ${teamType}",
+  >       "error": "Bad Request"
+  >   }
+  >
   >   - 자신이 팀의 주장이 아닌데 게임 종료를 요청한 경우
   >   {
   >       "statusCode": 403,
@@ -777,9 +906,42 @@ watch mode로 실행하기 전에,
 
   > 해당 포지션의 유저를 리뷰
   >
+  > - Request body
+  >
+  >   - report(선택 사항)
+  >     - "게임에 참가하지 않음"
+  >     - "비매너 플레이"
+  >     - "본인의 포지션을 지키지 않음"
+  >     - "무례한 언행"
+  >
+  >   ```
+  >   {
+  >       "rate": "5",
+  >       "report": "게임에 참가하지 않음"
+  >   }
+  >   ```
+  >
   > - 실패 시 response
   >
   >   ```
+  >   - rate가 1~5 사이의 정수가 아닐 경우 + report가 유효하지 않을 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": [
+  >           "rate must not be less than 1",
+  >           "rate must be an integer number",
+  >           "report must be a valid enum value"
+  >       ],
+  >       "error": "Bad Request"
+  >   }
+  >
+  >   - teamType가 'A' 또는 'B'가 아닌 경우
+  >   {
+  >       "statusCode": 400,
+  >       "message": "TeamType is invalid format : ${teamType}",
+  >       "error": "Bad Request"
+  >   }
+  >
   >   - uuid에 해당하는 리뷰가 없는 경우
   >   {
   >       "statusCode": 404,
@@ -787,11 +949,18 @@ watch mode로 실행하기 전에,
   >       "error": "Not Found"
   >   }
   >
-  >   - 게임 종료로부터 3일이 지난 게임을 리뷰하려고 하는 경우
+  >   - 게임 종료로부터 24시간이 지난 게임을 리뷰하려고 하는 경우
   >   {
   >       "statusCode": 403,
-  >       "message": "Reviews cannot be edited for games that have been 3 days since the game or have been blocked : ${review.uuid}",
+  >       "message": "Reviews cannot be edited for games that have been 24 hours since the game or have been blocked : ${review.uuid}",
   >       "error": "Forbidden"
+  >   }
+  >
+  >   - 유효하지 않은 포지션을 요청한 경우
+  >   {
+  >       "statusCode": 404,
+  >       "message": "Invalid Position : ${position}",
+  >       "error": "Not Found"
   >   }
   >
   >   - 아직 주장이 게임 종료를 요청하지 않은 경우

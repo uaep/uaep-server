@@ -1,7 +1,13 @@
 import { LocalDate } from '@js-joda/core';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-import { GAME_STATUS, GENDER, PLAYER_NUMBERS } from 'config/constants';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import {
+  GAME_STATUS,
+  GENDER,
+  LEVEL_LIMIT,
+  PLAYER_NUMBERS,
+  REGION_FILTER,
+} from 'config/constants';
 
 export class QueryFiltersDto {
   @IsOptional()
@@ -15,8 +21,8 @@ export class QueryFiltersDto {
   day?: number = LocalDate.now()['_day'];
 
   @IsOptional()
-  @IsString()
-  location?: string;
+  @IsEnum(REGION_FILTER)
+  region?: REGION_FILTER;
 
   @IsOptional()
   @IsEnum(PLAYER_NUMBERS)
@@ -29,4 +35,8 @@ export class QueryFiltersDto {
   @IsOptional()
   @IsEnum(GAME_STATUS)
   status?: GAME_STATUS;
+
+  @IsOptional()
+  @IsEnum(LEVEL_LIMIT)
+  level_limit?: LEVEL_LIMIT;
 }

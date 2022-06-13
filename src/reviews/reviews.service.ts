@@ -1,13 +1,15 @@
 import { LocalDateTime } from '@js-joda/core';
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { REVIEW_STATUS } from 'config/constants';
+import { LEVEL, REVIEW_STATUS } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
+import { ReviewDto } from './dto/review.dto';
 import { ReviewEntity } from './entities/review.entity';
 
 @Injectable()
@@ -27,7 +29,7 @@ export class ReviewsService {
       if (
         review.status === REVIEW_STATUS.REVIEW &&
         LocalDateTime.parse(review.date.toISOString().replace('Z', ''))
-          .plusDays(3)
+          .plusDays(1)
           .plusHours(9)
           .isBefore(LocalDateTime.now())
       ) {
@@ -43,13 +45,23 @@ export class ReviewsService {
             const reviewedUser = await this.userRepository.findOne({
               email: value['email'],
             });
-            if (value['rating']) {
+            if (value['rating'] && Object.keys(value['rating']).length !== 0) {
               let ratingSum = 0;
               for (const rateValue of Object.values(value['rating'])) {
-                ratingSum += Number(rateValue) - 3;
+                if (Number(rateValue) < 3) {
+                  ratingSum += Number(rateValue) * 2 - 6;
+                } else {
+                  ratingSum += Number(rateValue) - 3;
+                }
               }
-              reviewedUser.level_point +=
-                ratingSum / Object.keys(value['rating']).length;
+              reviewedUser.level_point =
+                reviewedUser.level_point +
+                  ratingSum / Object.keys(value['rating']).length >
+                0
+                  ? reviewedUser.level_point +
+                    ratingSum / Object.keys(value['rating']).length
+                  : 0;
+              reviewedUser.updateLevel();
               await this.userRepository.save(reviewedUser);
             }
           }
@@ -61,13 +73,23 @@ export class ReviewsService {
             const reviewedUser = await this.userRepository.findOne({
               email: value['email'],
             });
-            if (value['rating']) {
+            if (value['rating'] && Object.keys(value['rating']).length !== 0) {
               let ratingSum = 0;
               for (const rateValue of Object.values(value['rating'])) {
-                ratingSum += Number(rateValue) - 3;
+                if (Number(rateValue) < 3) {
+                  ratingSum += Number(rateValue) * 2 - 6;
+                } else {
+                  ratingSum += Number(rateValue) - 3;
+                }
               }
-              reviewedUser.level_point +=
-                ratingSum / Object.keys(value['rating']).length;
+              reviewedUser.level_point =
+                reviewedUser.level_point +
+                  ratingSum / Object.keys(value['rating']).length >
+                0
+                  ? reviewedUser.level_point +
+                    ratingSum / Object.keys(value['rating']).length
+                  : 0;
+              reviewedUser.updateLevel();
               await this.userRepository.save(reviewedUser);
             }
           }
@@ -108,8 +130,11 @@ export class ReviewsService {
     reviewId: string,
     teamType: string,
     position: string,
-    rate: string,
+    reviewDto: ReviewDto,
   ) {
+    if (teamType !== 'A' && teamType !== 'B') {
+      throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
+    }
     const opponentType = teamType === 'A' ? 'B' : 'A';
     const currentUser = await this.userRepository.findOne({
       email: user.email,
@@ -120,7 +145,7 @@ export class ReviewsService {
     }
     if (
       LocalDateTime.parse(review.date.toISOString().replace('Z', ''))
-        .plusDays(3)
+        .plusDays(1)
         .plusHours(9)
         .isBefore(LocalDateTime.now())
     ) {
@@ -128,8 +153,11 @@ export class ReviewsService {
     }
     if (review.status === REVIEW_STATUS.DONE) {
       throw new ForbiddenException(
-        `Reviews cannot be edited for games that have been 3 days since the game or have been blocked : ${review.uuid}`,
+        `Reviews cannot be edited for games that have been 24 hours since the game or have been blocked : ${review.uuid}`,
       );
+    }
+    if (!Object.keys(review[`team${teamType}`]).includes(position)) {
+      throw new NotFoundException(`Invalid Position : ${position}`);
     }
     let myPosition;
     for (const [key, value] of Object.entries(review[`team${teamType}`])) {
@@ -175,7 +203,7 @@ export class ReviewsService {
       currentUser.position_change_point += 1;
     }
     Object.assign(review[`team${teamType}`][position].rating, {
-      [myPosition]: rate,
+      [myPosition]: reviewDto.rate,
     });
 
     await this.userRepository.save(currentUser);

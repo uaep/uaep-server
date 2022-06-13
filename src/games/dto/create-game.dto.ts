@@ -1,5 +1,12 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
-import { GENDER, PLAYER_NUMBERS } from 'config/constants';
+import { Transform } from 'class-transformer';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { GENDER, LEVEL, LEVEL_LIMIT, PLAYER_NUMBERS } from 'config/constants';
 
 export class CreateGameDto {
   @IsNumber()
@@ -23,6 +30,7 @@ export class CreateGameDto {
   minute: number;
 
   @IsString()
+  @Transform(({ value }) => value.trim())
   @IsNotEmpty()
   place: string;
 
@@ -33,4 +41,8 @@ export class CreateGameDto {
   @IsEnum(GENDER)
   @IsNotEmpty()
   gender: GENDER;
+
+  @IsOptional()
+  @IsEnum(LEVEL_LIMIT)
+  level_limit?: LEVEL_LIMIT;
 }
