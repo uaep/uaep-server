@@ -138,6 +138,18 @@ watch mode로 실행하기 전에,
   >
   > - Request body
   >
+  >   - gender
+  >     - 남성, 여성
+  >   - province
+  >     - 서울특별시, 부산광역시, 대구광역시, 인천광역시, 광주광역시, 대전광역시, 울산광역시, 세종특별자치시, 경기도, 강원도, 충청북도, 충청남도, 전라북도, 전라남도, 경상북도, 경상남도, 제주특별자치도
+  >   - town
+  >     - config/config.ts/TOWN_ALL 참고
+  >   - position
+  >     - FW, MF, DF, GK
+  >   - level
+  >     - 스타터, 비기너, 아마추어, 세미프로, 프로 (회원가입 시에는 5개의 레벨만 존재)
+  >     - 사용자에게 보여지는 각 레벨에 따른 설명 필요
+  >
   >   ```
   >   {
   >       "name":"example",
@@ -207,6 +219,13 @@ watch mode로 실행하기 전에,
   >       "statusCode": 400,
   >       "message": "Incorrect email or password.",
   >       "error": "Bad Request"
+  >   }
+  >
+  >   - 계정이 잠긴 경우(manner_point가 0이하가 되면 3달동안 계정 잠김)
+  >   {
+  >       "statusCode": 412,
+  >       "message": "Your account has been locked due to persistent disrespectful behavior: until 2022-06-15T03:21:10",
+  >       "error": "Precondition Failed"
   >   }
   >   ```
   >
@@ -278,12 +297,13 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "email": "example@email.com",
-  >       "name": "Name",
+  >       "uuid": "c7b51036-5d0e-4b54-a871-e43ec70aea0c",
+  >       "email": "test@gmail.com",
+  >       "name": "이름",
   >       "gender": "남성",
-  >       "address": "address",
+  >       "address": "장소",
   >       "position": "FW",
-  >       "level_point": 0,
+  >       "level": "비기너3",
   >       "position_change_point": 30,
   >       "games": []
   >   }
@@ -294,6 +314,13 @@ watch mode로 실행하기 전에,
   > 프로필 수정
   >
   > - Request body
+  >
+  >   - province
+  >     - 서울특별시, 부산광역시, 대구광역시, 인천광역시, 광주광역시, 대전광역시, 울산광역시, 세종특별자치시, 경기도, 강원도, 충청북도, 충청남도, 전라북도, 전라남도, 경상북도, 경상남도, 제주특별자치도
+  >   - town
+  >     - config/config.ts/TOWN_ALL 참고
+  >   - position
+  >     - FW, MF, DF, GK
   >
   >   ```
   >   name, province, town, position은 전부 optional
@@ -309,13 +336,13 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "email": "example@email.com",
-  >       "name": "Name",
+  >       "uuid": "c7b51036-5d0e-4b54-a871-e43ec70aea0c",
+  >       "email": "test@gmail.com",
+  >       "name": "이름",
   >       "gender": "남성",
-  >       "province" : "new-province",
-  >       "town" : "new-town",
+  >       "address": "장소",
   >       "position": "FW",
-  >       "level_point": 0,
+  >       "level": "비기너3",
   >       "position_change_point": 30,
   >       "games": []
   >   }
@@ -360,6 +387,47 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
+- GET /users/ranks
+
+  > 유저 랭킹 보기
+  > => 레벨이 높은 상위 10명의 user 리스트를 1위부터 순서대로 10위까지 return
+  >
+  > - 성공 시 response
+  >
+  > ```
+  > [
+  >   {
+  >       "id": 1,
+  >       "uuid": "5979dd07-089e-4c73-ba7d-771a0d6e2e37",
+  >       "email": "test1@gmail.com",
+  >       "name": "이름",
+  >       "password": "$2b$10$jqxTbfBS2TZMpi9YtNqGGehXoIoWeLhz31k0assivYdB3j35FVw4G",
+  >       "gender": "남성",
+  >       "province": "경기도",
+  >       "town": "수원시",
+  >       "position": "FW",
+  >       "level_point": 144,
+  >       "level": "프로3",
+  >       "manner_point": 100,
+  >       "account_unlock_date": null,
+  >       "position_change_point": 30,
+  >       "createdAt": "2022-06-15T08:51:01.369Z",
+  >       "updatedAt": "2022-06-15T08:51:01.369Z",
+  >       "currentHashedRefreshToken": null
+  >   },
+  >   {
+  >       user Object
+  >   },
+  >   {
+  >       user Object
+  >   },
+  >   ...
+  >   {
+  >       user Object
+  >   }
+  > ]
+  > ```
+
 - GET /games
 
   > 게임 방 전체 리스트
@@ -378,37 +446,39 @@ watch mode로 실행하기 전에,
   >     - 참가 가능, 마감
   >   - number_of_users
   >     - 6v6, 5v5
-  >   - region
+  >   - region(province와는 다름)
   >     - 서울, 경기/강원, 인천, 대전/세종/충청, 대구/경북, 부산/울산/경남, 광주/전라, 제주
+  >   - level_limit
+  >     - 모든 레벨, 비기너3 이하, 세미프로1 이상
   >
-  > - ex) /games?month=6&day=3&gender=남성&status=참가 가능&number_of_users=6v6&region=경기/강원
+  > - ex) /games?month=6&day=3&gender=남성&status=참가 가능&number_of_users=6v6&region=경기/강원&level_limit=비기너3 이하
   >
   > - 성공 시 response
   >
   >   ```
   >   [
   >       {
-  >           "id": 1,
-  >           "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
-  >           "date": "2022-05-20T18:50:00.000Z",
+  >           "uuid": "c6162563-75c1-4bb8-80b4-76498fe30093",
+  >           "date": "2022-06-15T12:30:01.000Z",
   >           "province": "경기도",
   >           "town": "수원시",
-  >           "place": "수원종합운동장",
+  >           "place": "수원월드컵경기장",
   >           "number_of_users": "6v6",
-  >           "gender": "남성",
-  >           "host": "방 만든 사람"
+  >           "gender": "성별 무관",
+  >           "status": "참가 가능",
+  >           "level_limit": "모든 레벨"
   >       },
   >       {
-  >           "id": 2,
-  >           "uuid": "4c97a3ef-51ce-4b9a-a4fa-1f6df5fda287",
-  >           "date": "2022-05-20T20:30:00.000Z",
+  >           "uuid": "c6162563-75c1-4bb8-80b4-76498fe41987",
+  >           "date": "2022-06-15T14:30:01.000Z",
   >           "province": "경기도",
   >           "town": "수원시",
   >           "place": "아주대학교 운동장",
   >           "number_of_users": "5v5",
-  >           "gender": "성별 무관",
-  >           "host": "방 만든 사람"
-  >       }
+  >           "gender": "남성",
+  >           "status": "참가 가능",
+  >           "level_limit": "세미프로1 이상"
+  >       },
   >   ]
   >   ```
 
@@ -417,6 +487,17 @@ watch mode로 실행하기 전에,
   > 게임 방 생성
   >
   > - Request body
+  >
+  >   - gender
+  >     - 남성, 여성, 성별 무관
+  >   - number_of_users
+  >     - 6v6, 5v5
+  >     - 5v5인 경우는 반드시 level_limit이 '세미프로1 이상'이어야 함 (아래 case중 하나를 선택해야 함)
+  >       - case 1) 5v5를 선택한 경우 level_limit에서 '모든 레벨'과 '비기너3 이하'를 비활성화 (Best case)
+  >       - case 2) level_limit에서 '모든 레벨'과 '비기너3 이하'를 비활성화하지 않고, 경기 생성 버튼을 누를 시 에러 창을 띄워 줌
+  >   - level_limit
+  >     - 모든 레벨, 비기너3 이하, 세미프로1 이상
+  >     - number_of_users가 5v5인 경우, 반드시 level_limit은 '세미프로1 이상'이어야 함 (위의 number_of_users의 case 참고)
   >
   >   ```
   >   {
@@ -427,7 +508,8 @@ watch mode로 실행하기 전에,
   >       "minute" : 50,
   >       "place" : "수원종합운동장",
   >       "number_of_users" : "6v6",
-  >       "gender" : "성별 무관"
+  >       "gender" : "성별 무관",
+  >       "level_limit": "모든 레벨"
   >   }
   >   ```
   >
@@ -494,6 +576,15 @@ watch mode로 실행하기 전에,
   >
   > - 성공 시 response
   >
+  >   - level_distribution
+  >     - 준비 완료된 유저들의 레벨 분포도를 비율로 나타냄 (%가 아니라 소수점으로 나타남)
+  >     - level_limit이 '모든 레벨'인 경우
+  >       - 스타터, 비기너, 아마추어, 세미프로, 프로
+  >     - level_limit이 '비기너3 이하'인 경우
+  >       - 스타터1, 스타터2, 스타터3, 비기너1, 비기너2, 비기너3
+  >     - level_limit이 '세미프로1 이상'인 경우
+  >       - 세미프로1, 세미프로2, 세미프로3, 프로1, 프로2, 프로3
+  >
   >   ```
   >   {
   >       "id": 1,
@@ -542,7 +633,18 @@ watch mode로 실행하기 전에,
   > id에 해당하는 게임 방에서 teamType(A or B)의 포메이션 설정
   > => 포메이션을 설정하면 그 팀의 주장으로 임명됨
   >
+  > - Request Parameters
+  >
+  >   - teamType
+  >     - A, B
+  >
   > - Request body
+  >
+  >   - formation
+  >     - 6v6인 경우
+  >       - F212, F221, F131
+  >     - 5v5인 경우
+  >       - F202, F211, F121, F112
   >
   >   ```
   >   {
@@ -640,6 +742,13 @@ watch mode로 실행하기 전에,
 
   > id에 해당하는 게임 방에서 teamType(A or B)의 포메이션 내에서 원하는 position 선택
   >
+  > - Request Parameters
+  >
+  >   - teamType
+  >     - A, B
+  >   - position
+  >     - ex) F212인 경우 - FW1, FW2, MF, DF1, DF2, GK
+  >
   > - 성공 시 response
   >
   >   ```
@@ -724,11 +833,23 @@ watch mode로 실행하기 전에,
   >       "message": "You already select teamA : FW1",
   >       "error": "Conflict"
   >   }
+  >
+  >   - A팀의 주장이 B팀의 포지션을 요청한 경우
+  >   {
+  >       "statusCode": 409,
+  >       "message": "You are the captain of teamA",
+  >       "error": "Conflict"
+  >   }
   >   ```
 
 - PATCH /games/:uuid/:teamType/captain
 
   > 주장을 다른 팀원에게 양도
+  >
+  > - Request Parameters
+  >
+  >   - teamType
+  >     - A, B
   >
   > - Request body
   >
@@ -768,6 +889,11 @@ watch mode로 실행하기 전에,
   > 게임이 끝난 경우(방을 만들 때 정해진 게임 시간을 기준으로 게임이 끝난지를 판단)
   > => 주장이 게임 종료를 요청한 팀의 팀원들만 리뷰를 진행할 수 있음
   >
+  > - Request Parameters
+  >
+  >   - teamType
+  >     - A, B
+  >
   > - 실패 시 response
   >
   >   ```
@@ -793,6 +919,60 @@ watch mode로 실행하기 전에,
   >   }
   >   ```
 
+- GET /games/recommend
+
+  > 나에게 가장 적합한 게임 추천
+  > => 같은 province와 town이고 status가 '참가 가능'이며 gender와 level_limit에 걸리지 않고 내 포지션에 빈 자리가 있는 게임이며 내가 현재 참가 중이 아닌 게임 중에서, 유저들의 레벨 평균이 나와 유사하고 표준편차가 가장 작은(레벨 차이가 가장 작은) 게임 1개를 추천한다.
+  >
+  > - 성공 시 response
+  >
+  >   ```
+  >   {
+  >       "id": 1,
+  >       "uuid": "7a925351-e7a3-40f3-9b47-77fd05b624fb",
+  >       "date": "2022-05-20T18:50:00.000Z",
+  >       "place": "수원종합운동장",
+  >       "number_of_users": "6v6",
+  >       "gender": "남성",
+  >       "host": "방 만든 사람",
+  >       "teamA": {
+  >           "FW1": {
+  >               "email": "test@gmail.com",
+  >               "name": "name",
+  >               "gender": "남성",
+  >               "address": "address",
+  >               "position": "FW",
+  >               "level_point": 0
+  >           }
+  >           "FW2": null,
+  >           "MF": null,
+  >           "DF1": null,
+  >           "DF2": null,
+  >           "GK": null,
+  >           "CAPTAIN": {
+  >               "email": "test@gmail.com",
+  >               "name": "주장 A",
+  >               "gender": "남성",
+  >               "address": "address",
+  >               "position": "FW",
+  >               "level_point": 0
+  >           }
+  >       },
+  >       "teamB": null,
+  >       "status": "참가 가능",
+  >       "level_limit": "모든 레벨",
+  >       "level_distribution": {
+  >           "스타터": 0.1666667,
+  >           "비기너": 0.3333333,
+  >           "아마추어": 0.5,
+  >           "세미프로": 0,
+  >           "프로": 0
+  >       },
+  >   }
+  >   ```
+  >
+  > **<!>조건에 부합하는 게임이 없는 경우 아무것도 return하지 않는다(빈 Object나 array를 return하지 않음)**
+
 **<참고> 현재 dev서버에서 테스트용으로 GK에 dummy data를 자동으로 생성함(src/games/games.service.ts/selectFormation#187) + 모든 포지션에 유저가 있지 않아도 게임 종료 및 리뷰가 가능함(prod에서는 변경 예정)**
 
 - GET /reviews
@@ -800,10 +980,11 @@ watch mode로 실행하기 전에,
   > 리뷰 리스트
   > => 주장이 게임 종료를 요청한 팀의 팀원들만 리뷰리스트에 해당 리뷰가 나타남
   >
-  > - status
+  > - review properties
   >
-  >   - "리뷰 쓰기" : default
-  >   - "완료" : 종료시간으로부터 3일 후 게임에 참가한 인원 중 아무나 리뷰 리스트를 처음 요청한 순간 자동으로 바뀜 => Batch를 따로 만들지 않았기 때문에
+  >   - status
+  >     - "리뷰 쓰기" : default
+  >     - "완료" : 종료시간으로부터 3일 후 게임에 참가한 인원 중 아무나 리뷰 리스트를 처음 요청한 순간 자동으로 바뀜 => Batch를 따로 만들지 않았기 때문에
   >
   > - 성공 시 response
   >
@@ -908,7 +1089,9 @@ watch mode로 실행하기 전에,
   >
   > - Request body
   >
-  >   - report(선택 사항)
+  >   - rate
+  >     - 1 ~ 5
+  >   - report(optional)
   >     - "게임에 참가하지 않음"
   >     - "비매너 플레이"
   >     - "본인의 포지션을 지키지 않음"
@@ -916,7 +1099,7 @@ watch mode로 실행하기 전에,
   >
   >   ```
   >   {
-  >       "rate": "5",
+  >       "rate": 1,
   >       "report": "게임에 참가하지 않음"
   >   }
   >   ```

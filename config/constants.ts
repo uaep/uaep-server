@@ -1,5 +1,7 @@
 export const DOMAIN = ['gmail.com', 'naver.com'];
 
+export const MANNER_POINT = 100;
+
 export enum GENDER {
   MALE = '남성',
   FEMALE = '여성',
@@ -120,4 +122,11 @@ export enum REVIEW_REPORT {
   BAD_MANNERS = '비매너 플레이',
   POSITION = '본인의 포지션을 지키지 않음',
   RUDE = '무례한 언행',
+}
+
+export enum REVIEW_REPORT_POINT {
+  '게임에 참가하지 않음' = 30,
+  '비매너 플레이' = 10,
+  '본인의 포지션을 지키지 않음' = 20,
+  '무례한 언행' = 10,
 }

@@ -165,6 +165,7 @@ export class GamesService {
         number_of_seats,
         review_flag,
         level_distribution,
+        meanOfLevelPoint,
         ...gameInfo
       } = game;
       gameLists.push(gameInfo);
@@ -281,11 +282,11 @@ export class GamesService {
     if (teamType !== 'A' && teamType !== 'B') {
       throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
     }
-    const opponentType = teamType === 'A' ? 'B' : 'A';
     const game = await this.gameRepository.findOne({ uuid: gameId });
     if (!game) {
       throw new NotFoundException(`Game ${gameId} is not exist`);
     }
+    const opponentType = teamType === 'A' ? 'B' : 'A';
     if (game[`team${opponentType}`] !== null) {
       for (const [key, value] of Object.entries(game[`team${opponentType}`])) {
         if (value === null) {
@@ -470,10 +471,14 @@ export class GamesService {
             )) {
               if (key === currentUser.level.slice(0, -1)) {
                 game.level_distribution[key] =
-                  (value * game.users.length - 1) / (game.users.length - 1);
+                  (value * game.users.length - 1) / (game.users.length - 1)
+                    ? (value * game.users.length - 1) / (game.users.length - 1)
+                    : 0;
               } else {
                 game.level_distribution[key] =
-                  (value * game.users.length) / (game.users.length - 1);
+                  (value * game.users.length) / (game.users.length - 1)
+                    ? (value * game.users.length) / (game.users.length - 1)
+                    : 0;
               }
             }
             break;
@@ -484,17 +489,37 @@ export class GamesService {
             )) {
               if (key === currentUser.level) {
                 game.level_distribution[key] =
-                  (value * game.users.length - 1) / (game.users.length - 1);
+                  (value * game.users.length - 1) / (game.users.length - 1)
+                    ? (value * game.users.length - 1) / (game.users.length - 1)
+                    : 0;
               } else {
                 game.level_distribution[key] =
-                  (value * game.users.length) / (game.users.length - 1);
+                  (value * game.users.length) / (game.users.length - 1)
+                    ? (value * game.users.length) / (game.users.length - 1)
+                    : 0;
               }
             }
             break;
         }
+        game.meanOfLevelPoint =
+          game.users.length > 1
+            ? (game.meanOfLevelPoint * game.users.length -
+                currentUser.level_point) /
+              (game.users.length - 1)
+            : 0;
         game.users = game.users.filter((gamer) => {
           return gamer.email !== user.email;
         });
+        let sumOfDeviation = 0;
+        for (const user of game.users) {
+          sumOfDeviation +=
+            (user.level_point - game.meanOfLevelPoint) *
+            (user.level_point - game.meanOfLevelPoint);
+        }
+        game.standardDeviation =
+          game.users.length !== 0
+            ? Math.sqrt(sumOfDeviation / game.users.length)
+            : 0;
         game.number_of_seats += 1;
         if (game.status === GAME_STATUS.CLOSED) {
           game.status = GAME_STATUS.AVAILABLE;
@@ -510,27 +535,41 @@ export class GamesService {
         }, but you choose ${position.replace(/[0-9]/g, '')}`,
       );
     }
-
-    if (game['teamA']) {
-      for (const [key, value] of Object.entries(game['teamA'])) {
-        if (key.replace(/[0-9]/g, '') === currentUser.position) {
-          if (value === null) {
-            continue;
-          }
-          if (value['email'] === currentUser.email) {
-            throw new ConflictException(`You already select teamA : ${key}`);
+    const opponentType = teamType === 'A' ? 'B' : 'A';
+    if (game[`team${teamType}`]) {
+      for (const [key, value] of Object.entries(game[`team${teamType}`])) {
+        if (key !== 'CAPTAIN') {
+          if (key.replace(/[0-9]/g, '') === currentUser.position) {
+            if (value === null) {
+              continue;
+            }
+            if (value['email'] === currentUser.email) {
+              throw new ConflictException(
+                `You already select team${teamType} : ${key}`,
+              );
+            }
           }
         }
       }
     }
-    if (game['teamB']) {
-      for (const [key, value] of Object.entries(game['teamB'])) {
-        if (key.replace(/[0-9]/g, '') === currentUser.position) {
-          if (value === null) {
-            continue;
+    if (game[`team${opponentType}`]) {
+      for (const [key, value] of Object.entries(game[`team${opponentType}`])) {
+        if (key !== 'CAPTAIN') {
+          if (key.replace(/[0-9]/g, '') === currentUser.position) {
+            if (value === null) {
+              continue;
+            }
+            if (value['email'] === currentUser.email) {
+              throw new ConflictException(
+                `You already select team${opponentType} : ${key}`,
+              );
+            }
           }
+        } else {
           if (value['email'] === currentUser.email) {
-            throw new ConflictException(`You already select teamB : ${key}`);
+            throw new ConflictException(
+              `You are the captain of team${opponentType}`,
+            );
           }
         }
       }
@@ -565,7 +604,17 @@ export class GamesService {
           }
           break;
       }
+      game.meanOfLevelPoint =
+        (game.meanOfLevelPoint * game.users.length + currentUser.level_point) /
+        (game.users.length + 1);
       game.users.push(currentUser);
+      let sumOfDeviation = 0;
+      for (const user of game.users) {
+        sumOfDeviation +=
+          (user.level_point - game.meanOfLevelPoint) *
+          (user.level_point - game.meanOfLevelPoint);
+      }
+      game.standardDeviation = Math.sqrt(sumOfDeviation / game.users.length);
       game.number_of_seats -= 1;
     }
     if (game.number_of_seats === 0) {
@@ -614,7 +663,10 @@ export class GamesService {
           if (key === 'CAPTAIN' || value === null) {
             continue;
           }
-          Object.assign(newReview[`team${teamType}`][`${key}`], { rating: {} });
+          Object.assign(newReview[`team${teamType}`][`${key}`], {
+            rating: {},
+            report: {},
+          });
         }
 
         for (const [key, value] of Object.entries(
@@ -625,6 +677,7 @@ export class GamesService {
           }
           Object.assign(newReview[`team${opponentType}`][`${key}`], {
             rating: {},
+            report: {},
           });
         }
       }
@@ -660,7 +713,91 @@ export class GamesService {
     }
   }
 
-  // async recommendGames(user) {
-  //   return true;
-  // }
+  async recommendGames(user) {
+    const currentUser = await this.userRepository.findOne({
+      email: user.email,
+    });
+    const gameConditions = {
+      where: [],
+      relations: ['users'],
+    };
+    const where1 = [];
+    if (currentUser.level_point < LEVEL_POINT[LEVEL.A1]) {
+      where1.push({ level_limit: LEVEL_LIMIT.BELOW_B3 });
+    } else if (currentUser.level_point >= LEVEL_POINT[LEVEL.SP1]) {
+      where1.push({ level_limit: LEVEL_LIMIT.HIGHER_SP1 });
+    }
+    where1.push({ level_limit: LEVEL_LIMIT.ALL });
+    const where2 = JSON.parse(JSON.stringify(where1));
+    where1.forEach((condition) => {
+      Object.assign(condition, {
+        gender: GENDER.ANY,
+        status: GAME_STATUS.AVAILABLE,
+        province: currentUser.province,
+        town: currentUser.town,
+      });
+      gameConditions.where.push(condition);
+    });
+    where2.forEach((condition) => {
+      Object.assign(condition, {
+        gender: currentUser.gender,
+        status: GAME_STATUS.AVAILABLE,
+        province: currentUser.province,
+        town: currentUser.town,
+      });
+      gameConditions.where.push(condition);
+    });
+    const games = await this.gameRepository.find(gameConditions);
+    const recommendGames = [];
+    games.forEach((game) => {
+      let alreadyExist = false;
+      let availableSeat = false;
+      if (game.teamA) {
+        for (const [key, value] of Object.entries(game.teamA)) {
+          if (key.replace(/[0-9]/g, '') === currentUser.position) {
+            if (value !== null && value.email === currentUser.email) {
+              alreadyExist = true;
+              break;
+            }
+            if (value === null) {
+              availableSeat = true;
+            }
+          }
+        }
+      }
+      if (game.teamB) {
+        for (const [key, value] of Object.entries(game.teamB)) {
+          if (key.replace(/[0-9]/g, '') === currentUser.position) {
+            if (value !== null && value.email === currentUser.email) {
+              alreadyExist = true;
+              break;
+            }
+            if (value === null) {
+              availableSeat = true;
+            }
+          }
+        }
+      }
+      if (!alreadyExist && availableSeat) {
+        recommendGames.push(game);
+      }
+    });
+    const recommendGameByMean = [];
+    for (const game of recommendGames) {
+      if (Math.abs(game.meanOfLevelPoint - currentUser.level_point) < 10) {
+        recommendGameByMean.push(game);
+      }
+    }
+    let recommendGame;
+    for (const game of recommendGameByMean) {
+      if (!recommendGame) {
+        recommendGame = game;
+      } else {
+        if (recommendGame.standardDeviation > game.standardDeviation) {
+          recommendGame = game;
+        }
+      }
+    }
+    return recommendGame;
+  }
 }

@@ -42,7 +42,7 @@ export class CreateGameDto {
   @IsNotEmpty()
   gender: GENDER;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsEnum(LEVEL_LIMIT)
-  level_limit?: LEVEL_LIMIT;
+  level_limit: LEVEL_LIMIT;
 }

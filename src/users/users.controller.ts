@@ -128,11 +128,11 @@ export class UserController {
     return await this.userService.getProfile(req.user.email, req.user.email);
   }
 
-  // @UseGuards(JwtAuthGuard)
-  // @Get('/reviews')
-  // async getAllReviews(@Req() req) {
-  //   return await this.userService.getAllReviews(req.user.email);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Get('/ranks')
+  async getRanks(@Req() req) {
+    return await this.userService.getRanks();
+  }
 
   @UseGuards(JwtAuthGuard)
   @Patch()

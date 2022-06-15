@@ -36,10 +36,10 @@ export class GamesController {
     return { url: `${this.config.get('BASE_URL')}/games/${createdGame.uuid}` };
   }
 
-  // @Get('/recommend')
-  // async recommendGames(@Req() req) {
-  //   return await this.gameService.recommendGames(req.user);
-  // }
+  @Get('/recommend')
+  async recommendGames(@Req() req) {
+    return await this.gameService.recommendGames(req.user);
+  }
 
   @Get('/:id')
   async getGame(@Req() req, @Param('id') id: string): Promise<GameEntity> {

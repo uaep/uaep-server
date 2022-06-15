@@ -1,4 +1,4 @@
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { GAME_STATUS, GENDER, LEVEL_LIMIT, PROVINCE } from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import {
@@ -62,8 +62,14 @@ export class GameEntity {
 
   @Column({ type: 'enum', enum: LEVEL_LIMIT, default: LEVEL_LIMIT.ALL })
   @IsEnum(LEVEL_LIMIT)
-  level_limit?: LEVEL_LIMIT;
+  level_limit: LEVEL_LIMIT;
 
   @Column({ type: 'json', nullable: true })
   level_distribution?: object;
+
+  @Column({ type: 'float', default: 0.0 })
+  meanOfLevelPoint?: number;
+
+  @Column({ type: 'float', default: 0.0 })
+  standardDeviation?: number;
 }

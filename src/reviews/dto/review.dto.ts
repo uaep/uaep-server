@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -12,12 +13,13 @@ import { REVIEW_REPORT } from 'config/constants';
 export class ReviewDto {
   @IsInt()
   @Type(() => Number)
-  @Min(1)
+  @Min(0)
   @Max(5)
   @IsNotEmpty()
   rate: number;
 
-  @IsEnum(REVIEW_REPORT)
   @IsOptional()
-  report?: REVIEW_REPORT;
+  @IsArray()
+  @IsEnum(REVIEW_REPORT, { each: true })
+  reports?: REVIEW_REPORT[];
 }

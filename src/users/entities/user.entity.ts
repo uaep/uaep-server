@@ -15,6 +15,7 @@ import {
   GENDER,
   LEVEL,
   LEVEL_POINT,
+  MANNER_POINT,
   POSITION,
   PROVINCE,
 } from 'config/constants';
@@ -50,10 +51,6 @@ export class UserEntity {
   @IsEnum(PROVINCE)
   province: PROVINCE;
 
-  // @Column({ type: 'enum', enum: TOWN })
-  // @IsEnum(TOWN)
-  // town: TOWN;
-
   @Column()
   town: string;
 
@@ -67,6 +64,12 @@ export class UserEntity {
   @Column({ type: 'enum', enum: LEVEL })
   @IsEnum(LEVEL)
   level: LEVEL;
+
+  @Column({ default: MANNER_POINT })
+  manner_point: number;
+
+  @Column({ nullable: true })
+  account_unlock_date?: Date;
 
   @Column({ default: 0 })
   position_change_point: number;

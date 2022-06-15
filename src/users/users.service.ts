@@ -29,27 +29,27 @@ export class UserService {
 
   async testCreateUser(users) {
     users.forEach(async (user) => {
-      user.level = user.level + '1';
-      let level_point;
-      switch (user.level) {
-        case LEVEL.S1:
-          level_point = LEVEL_POINT[LEVEL.S1];
-          break;
-        case LEVEL.B1:
-          level_point = LEVEL_POINT[LEVEL.B1];
-          break;
-        case LEVEL.A1:
-          level_point = LEVEL_POINT[LEVEL.A1];
-          break;
-        case LEVEL.SP1:
-          level_point = LEVEL_POINT[LEVEL.SP1];
-          break;
-        case LEVEL.P1:
-          level_point = LEVEL_POINT[LEVEL.P1];
-          break;
-        default:
-          throw new BadRequestException(`${user.level} is not exist`);
-      }
+      // user.level = user.level + '1';
+      const level_point = LEVEL_POINT[user.level];
+      // switch (user.level) {
+      //   case LEVEL.S1:
+      //     level_point = LEVEL_POINT[LEVEL.S1];
+      //     break;
+      //   case LEVEL.B1:
+      //     level_point = LEVEL_POINT[LEVEL.B1];
+      //     break;
+      //   case LEVEL.A1:
+      //     level_point = LEVEL_POINT[LEVEL.A1];
+      //     break;
+      //   case LEVEL.SP1:
+      //     level_point = LEVEL_POINT[LEVEL.SP1];
+      //     break;
+      //   case LEVEL.P1:
+      //     level_point = LEVEL_POINT[LEVEL.P1];
+      //     break;
+      //   default:
+      //     throw new BadRequestException(`${user.level} is not exist`);
+      // }
       const newUser = this.userRepository.create({
         level_point: level_point,
         ...user,
@@ -235,5 +235,13 @@ export class UserService {
     userProfile.name = newUserInfo.name ? newUserInfo.name : userProfile.name;
     await this.userRepository.save(userProfile);
     return await this.getProfile(email, email);
+  }
+
+  async getRanks() {
+    const allUsers = await this.userRepository.find({
+      order: { level_point: 'DESC', manner_point: 'DESC' },
+      take: 10,
+    });
+    return allUsers;
   }
 }

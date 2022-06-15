@@ -6,7 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LEVEL, REVIEW_STATUS } from 'config/constants';
+import {
+  REVIEW_REPORT,
+  REVIEW_REPORT_POINT,
+  REVIEW_STATUS,
+} from 'config/constants';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import { ReviewDto } from './dto/review.dto';
@@ -47,23 +51,33 @@ export class ReviewsService {
             });
             if (value['rating'] && Object.keys(value['rating']).length !== 0) {
               let ratingSum = 0;
+              let number_of_raters = 0;
               for (const rateValue of Object.values(value['rating'])) {
-                if (Number(rateValue) < 3) {
+                if (Number(rateValue) === 0) {
+                  continue;
+                } else if (Number(rateValue) < 3) {
                   ratingSum += Number(rateValue) * 2 - 6;
                 } else {
                   ratingSum += Number(rateValue) - 3;
                 }
+                number_of_raters += 1;
               }
               reviewedUser.level_point =
-                reviewedUser.level_point +
-                  ratingSum / Object.keys(value['rating']).length >
-                0
-                  ? reviewedUser.level_point +
-                    ratingSum / Object.keys(value['rating']).length
+                reviewedUser.level_point + ratingSum / number_of_raters > 0
+                  ? reviewedUser.level_point + ratingSum / number_of_raters
                   : 0;
               reviewedUser.updateLevel();
-              await this.userRepository.save(reviewedUser);
             }
+            if (value['report'] && Object.keys(value['report']).length !== 0) {
+              for (const [reportKey, reportValue] of Object.entries(
+                value['report'],
+              )) {
+                if (reportValue >= 3) {
+                  reviewedUser.manner_point -= REVIEW_REPORT_POINT[reportKey];
+                }
+              }
+            }
+            await this.userRepository.save(reviewedUser);
           }
           for (const [key, value] of Object.entries(review.teamB)) {
             // TODO : value === null일 수 없음 + GK 삭제
@@ -75,23 +89,38 @@ export class ReviewsService {
             });
             if (value['rating'] && Object.keys(value['rating']).length !== 0) {
               let ratingSum = 0;
+              let number_of_raters = 0;
               for (const rateValue of Object.values(value['rating'])) {
-                if (Number(rateValue) < 3) {
+                if (Number(rateValue) === 0) {
+                  continue;
+                } else if (Number(rateValue) < 3) {
                   ratingSum += Number(rateValue) * 2 - 6;
                 } else {
                   ratingSum += Number(rateValue) - 3;
                 }
+                number_of_raters += 1;
               }
               reviewedUser.level_point =
-                reviewedUser.level_point +
-                  ratingSum / Object.keys(value['rating']).length >
-                0
-                  ? reviewedUser.level_point +
-                    ratingSum / Object.keys(value['rating']).length
+                reviewedUser.level_point + ratingSum / number_of_raters > 0
+                  ? reviewedUser.level_point + ratingSum / number_of_raters
                   : 0;
               reviewedUser.updateLevel();
-              await this.userRepository.save(reviewedUser);
             }
+            if (value['report'] && Object.keys(value['report']).length !== 0) {
+              for (const [reportKey, reportValue] of Object.entries(
+                value['report'],
+              )) {
+                if (reportValue >= 3) {
+                  reviewedUser.manner_point -= REVIEW_REPORT_POINT[reportKey];
+                }
+              }
+              if (reviewedUser.manner_point < 0) {
+                reviewedUser.account_unlock_date = new Date(
+                  new Date().setMonth(new Date().getMonth() + 3),
+                );
+              }
+            }
+            await this.userRepository.save(reviewedUser);
           }
           review.apply_flag = true;
         }
@@ -135,6 +164,31 @@ export class ReviewsService {
     if (teamType !== 'A' && teamType !== 'B') {
       throw new BadRequestException(`TeamType is invalid format : ${teamType}`);
     }
+    if (
+      reviewDto.rate === 0 &&
+      (!reviewDto.reports || !reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW))
+    ) {
+      throw new BadRequestException('Rate 0 can only be given for a no-show');
+    }
+    if (reviewDto.reports) {
+      if (
+        reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW) &&
+        reviewDto.rate !== 0
+      ) {
+        throw new BadRequestException(
+          'In case of no-show, only Rate 0 can be given',
+        );
+      }
+      if (
+        reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW) &&
+        reviewDto.reports.length !== 1
+      ) {
+        throw new BadRequestException(
+          'In case of no-show, no other report can be selected',
+        );
+      }
+    }
+
     const opponentType = teamType === 'A' ? 'B' : 'A';
     const currentUser = await this.userRepository.findOne({
       email: user.email,
@@ -205,6 +259,37 @@ export class ReviewsService {
     Object.assign(review[`team${teamType}`][position].rating, {
       [myPosition]: reviewDto.rate,
     });
+    if (reviewDto.reports) {
+      if (!reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW)) {
+        for (const report of reviewDto.reports) {
+          if (review[`team${teamType}`][position].report[report]) {
+            Object.assign(review[`team${teamType}`][position].report, {
+              [report]:
+                Number(review[`team${teamType}`][position].report[report]) + 1,
+            });
+          } else {
+            Object.assign(review[`team${teamType}`][position].report, {
+              [report]: 1,
+            });
+          }
+        }
+      } else {
+        if (review[`team${teamType}`][position].report[REVIEW_REPORT.NO_SHOW]) {
+          Object.assign(review[`team${teamType}`][position].report, {
+            [REVIEW_REPORT.NO_SHOW]:
+              Number(
+                review[`team${teamType}`][position].report[
+                  REVIEW_REPORT.NO_SHOW
+                ],
+              ) + 1,
+          });
+        } else {
+          Object.assign(review[`team${teamType}`][position].report, {
+            [REVIEW_REPORT.NO_SHOW]: 1,
+          });
+        }
+      }
+    }
 
     await this.userRepository.save(currentUser);
     await this.reviewRepository.save(review);
