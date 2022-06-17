@@ -1,12 +1,6 @@
 import { Transform } from 'class-transformer';
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { GENDER, LEVEL, LEVEL_LIMIT, PLAYER_NUMBERS } from 'config/constants';
+import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { GENDER, LEVEL_LIMIT, PLAYER_NUMBERS } from 'config/constants';
 
 export class CreateGameDto {
   @IsNumber()

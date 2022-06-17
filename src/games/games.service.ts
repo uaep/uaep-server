@@ -166,6 +166,7 @@ export class GamesService {
         review_flag,
         level_distribution,
         meanOfLevelPoint,
+        standardDeviation,
         ...gameInfo
       } = game;
       gameLists.push(gameInfo);
@@ -798,6 +799,22 @@ export class GamesService {
         }
       }
     }
-    return recommendGame;
+    if (recommendGame) {
+      const {
+        id,
+        host,
+        teamA,
+        teamB,
+        users,
+        number_of_seats,
+        review_flag,
+        level_distribution,
+        meanOfLevelPoint,
+        standardDeviation,
+        ...recommendGameInfo
+      } = recommendGame;
+      return recommendGameInfo;
+    }
+    return null;
   }
 }

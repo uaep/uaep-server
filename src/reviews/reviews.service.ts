@@ -166,7 +166,7 @@ export class ReviewsService {
     }
     if (
       reviewDto.rate === 0 &&
-      (!reviewDto.reports || !reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW))
+      !reviewDto.reports.includes(REVIEW_REPORT.NO_SHOW)
     ) {
       throw new BadRequestException('Rate 0 can only be given for a no-show');
     }

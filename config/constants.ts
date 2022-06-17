@@ -118,6 +118,7 @@ export enum REVIEW_STATUS {
 }
 
 export enum REVIEW_REPORT {
+  NONE = '없음',
   NO_SHOW = '게임에 참가하지 않음',
   BAD_MANNERS = '비매너 플레이',
   POSITION = '본인의 포지션을 지키지 않음',
@@ -125,7 +126,8 @@ export enum REVIEW_REPORT {
 }
 
 export enum REVIEW_REPORT_POINT {
-  '게임에 참가하지 않음' = 30,
+  '없음' = 0,
+  '게임에 참가하지 않음' = 100, // 30
   '비매너 플레이' = 10,
   '본인의 포지션을 지키지 않음' = 20,
   '무례한 언행' = 10,
