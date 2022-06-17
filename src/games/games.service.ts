@@ -374,16 +374,16 @@ export class GamesService {
     }
 
     // TODO : test용 GK 생성 -> 삭제해야함
-    game[`team${teamType}`]['GK'] = {
-      uuid: 'test',
-      email: 'testGK@gmail.com',
-      name: '테스트 골키퍼',
-      gender: '남성',
-      address: '테스트',
-      position: 'GK',
-      level_point: 0,
-    };
-    game.number_of_seats -= 1;
+    // game[`team${teamType}`]['GK'] = {
+    //   uuid: 'test',
+    //   email: 'testGK@gmail.com',
+    //   name: '테스트 골키퍼',
+    //   gender: '남성',
+    //   address: '테스트',
+    //   position: 'GK',
+    //   level_point: 0,
+    // };
+    // game.number_of_seats -= 1;
 
     game[`team${teamType}`]['CAPTAIN'] = await this.userService.getProfile(
       user.email,
@@ -511,6 +511,9 @@ export class GamesService {
         game.users = game.users.filter((gamer) => {
           return gamer.email !== user.email;
         });
+        if (game.users.length === 0) {
+          return await this.gameRepository.remove(game);
+        }
         let sumOfDeviation = 0;
         for (const user of game.users) {
           sumOfDeviation +=

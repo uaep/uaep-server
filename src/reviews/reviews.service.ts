@@ -33,7 +33,8 @@ export class ReviewsService {
       if (
         review.status === REVIEW_STATUS.REVIEW &&
         LocalDateTime.parse(review.date.toISOString().replace('Z', ''))
-          .plusDays(1)
+          // .plusDays(1)
+          .plusMinutes(5)
           .plusHours(9)
           .isBefore(LocalDateTime.now())
       ) {
@@ -74,6 +75,11 @@ export class ReviewsService {
               )) {
                 if (reportValue >= 3) {
                   reviewedUser.manner_point -= REVIEW_REPORT_POINT[reportKey];
+                }
+                if (reviewedUser.manner_point < 0) {
+                  reviewedUser.account_unlock_date = new Date(
+                    new Date().setMonth(new Date().getMonth() + 3),
+                  );
                 }
               }
             }
