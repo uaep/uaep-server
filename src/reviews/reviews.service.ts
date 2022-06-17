@@ -44,7 +44,7 @@ export class ReviewsService {
         if (!review.apply_flag) {
           for (const [key, value] of Object.entries(review.teamA)) {
             // TODO : value === null일 수 없음 + GK 삭제
-            if (key === 'CAPTAIN' || value === null || key === 'GK') {
+            if (key === 'CAPTAIN' || value === null) {
               continue;
             }
             const reviewedUser = await this.userRepository.findOne({
@@ -87,7 +87,7 @@ export class ReviewsService {
           }
           for (const [key, value] of Object.entries(review.teamB)) {
             // TODO : value === null일 수 없음 + GK 삭제
-            if (key === 'CAPTAIN' || value === null || key === 'GK') {
+            if (key === 'CAPTAIN' || value === null) {
               continue;
             }
             const reviewedUser = await this.userRepository.findOne({

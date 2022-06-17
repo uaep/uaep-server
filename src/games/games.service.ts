@@ -696,7 +696,7 @@ export class GamesService {
 
     for (const [key, value] of Object.entries(game[`team${teamType}`])) {
       // TODO : key === 'GK' 삭제 + value === null일 수가 없음 -------> 게임 시작 전까지 인원이 다 모이지 않은 경우 예외 처리
-      if (key === 'CAPTAIN' || key === 'GK' || value === null) {
+      if (key === 'CAPTAIN' || value === null) {
         continue;
       }
       const playedUser = await this.userRepository.findOne(
